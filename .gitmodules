@@ -1,0 +1,6 @@
+[submodule "CanvasChaos"]
+	path = CanvasChaos
+	url = https://github.com/ennuiii/CanvasChaos.git
+[submodule "GameBuddiesTemplate"]
+	path = GameBuddiesTemplate
+	url = https://github.com/ennuiii/GameBuddiesTemplate.git
