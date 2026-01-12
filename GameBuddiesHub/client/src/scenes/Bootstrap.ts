@@ -1,7 +1,9 @@
 import Phaser from 'phaser'
+import Network from '../services/Network'
 
 export default class Bootstrap extends Phaser.Scene {
   private preloadComplete = false
+  network?: Network
 
   constructor() {
     super('bootstrap')
@@ -69,23 +71,31 @@ export default class Bootstrap extends Phaser.Scene {
 
     this.load.on('complete', () => {
       this.preloadComplete = true
+      console.log('Bootstrap: Assets loaded successfully')
     })
   }
 
   create() {
-    // Wait for preload to complete, then ready to launch game
-    if (this.preloadComplete) {
-      console.log('Bootstrap: Assets loaded successfully')
-    }
+    // Assets are preloaded, scene is ready
   }
 
-  launchGame(sessionId: string) {
+  async launchGame(): Promise<boolean> {
     if (!this.preloadComplete) {
       console.warn('Bootstrap: Assets not yet loaded')
       return false
     }
 
-    this.scene.launch('game', { sessionId })
+    // Create network and connect to server
+    this.network = new Network()
+    const connected = await this.network.joinHub()
+
+    if (!connected) {
+      console.error('Bootstrap: Failed to connect to server')
+      return false
+    }
+
+    // Launch game scene with network
+    this.scene.launch('game', { network: this.network })
     return true
   }
 }
