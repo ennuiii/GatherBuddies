@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-12)
 ## Current Position
 
 Phase: 1.5 of 3 (Integration)
-Plan: 1 of 3 (1.5-01: Add Colyseus to GameBuddieGamesServer)
-Status: Plans created, ready to execute
-Last activity: 2026-01-12 — Phase 1.5 plans created
+Plan: 3 of 3 (complete)
+Status: Phase complete
+Last activity: 2026-01-12 — Completed 1.5-03-PLAN.md
 
-Progress: ██░░░░░░░░ 25% (Phase 1 done, Phase 1.5 ready)
+Progress: █████░░░░░ 50% (Phases 1 and 1.5 complete)
 
 ## Architecture Clarification (2026-01-12)
 
@@ -22,7 +22,7 @@ Progress: ██░░░░░░░░ 25% (Phase 1 done, Phase 1.5 ready)
 **Revised approach (Phase 1.5+):** Colyseus inside GameBuddieGamesServer + GameBuddiesTemplate client
 
 Key integration points:
-1. Colyseus shares httpServer with Socket.IO in GameBuddieGamesServer
+1. Colyseus on port 3002, Socket.IO on port 3001 (separate ports required)
 2. Hub is a GamePlugin using Socket.IO for room flow + Colyseus for 2D world state
 3. Client follows GameBuddiesTemplate structure (HomePage → LobbyPage → GamePage)
 4. Portal zones launch games via URL navigation to gamebuddies.io/gamename
@@ -30,19 +30,20 @@ Key integration points:
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: ~11 min
-- Total execution time: ~22 min
+- Total plans completed: 5
+- Average duration: ~13 min
+- Total execution time: ~63 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | ~22 min | ~11 min |
+| 1.5 | 3 | ~41 min | ~14 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~7 min), 01-02 (~15 min)
-- Trend: Phase 1 complete, architecture revised
+- Last 5 plans: 01-02 (~15 min), 1.5-01 (~15 min), 1.5-02 (~15 min), 1.5-03 (~11 min)
+- Trend: Consistent execution times
 
 ## Accumulated Context
 
@@ -52,10 +53,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Colyseus integrated INTO GameBuddieGamesServer (not separate server)
+- Colyseus on port 3002, Socket.IO on port 3001 (separate ports)
 - Hub client uses GameBuddiesTemplate structure
 - Socket.IO for room management, Colyseus for 2D world state
 - Portal zones launch games via simple URL navigation
 - Phase 1 work (GameBuddiesHub/) kept as reference for migration
+- Added experimentalDecorators to tsconfig for @colyseus/schema
+- Hub client at port 5200 with /hub/ base path
+- Phase 1 Phaser files backed up to src-phaser-backup/
 
 ### Deferred Issues
 
@@ -63,20 +68,47 @@ None yet.
 
 ### Blockers/Concerns
 
-- Research complete: Colyseus needs separate port (3002) from Socket.IO (3001)
-- RetroArcade has working pattern to follow
+None - All infrastructure ready for Phaser integration.
 
 ## Session Continuity
 
 Last session: 2026-01-12
-Stopped at: Phase 1.5 plans created, ready to execute 1.5-01
-Resume file: .planning/phases/1.5-integration/1.5-01-PLAN.md
+Stopped at: Phase 1.5 complete
+Resume: Ready for Phase 2 (Social Features)
 
 ## What to Reuse from Phase 1
 
-The standalone GameBuddiesHub/ implementation has code to migrate:
-- `server/rooms/HubRoom.ts` → GameBuddieGamesServer/games/hub/
-- `client/src/scenes/` → Hub client GamePage
-- `client/src/characters/` → Hub client characters/
-- `client/src/anims/` → Hub client anims/
-- `client/public/assets/` → Hub client public/
+The standalone GameBuddiesHub/ implementation has been migrated:
+- `server/rooms/HubRoom.ts` → ✅ GameBuddieGamesServer/games/hub/
+- `client/src/scenes/` → ✅ Hub client src/game/scenes/
+- `client/src/characters/` → ✅ Hub client src/game/characters/
+- `client/src/anims/` → ✅ Hub client src/game/anims/
+- `client/public/assets/` → ✅ Already in place
+
+**Backup location:** `GameBuddiesHub/client/src-phaser-backup/`
+
+## Files Created in 1.5-01
+
+- `GameBuddieGamesServer/core/colyseus/ColyseusServer.ts`
+- `GameBuddieGamesServer/games/hub/HubRoom.ts`
+- `GameBuddieGamesServer/games/hub/Message.ts`
+- `GameBuddieGamesServer/games/hub/schema/HubState.ts`
+- `GameBuddieGamesServer/games/hub/index.ts`
+
+## Files Created in 1.5-02
+
+- `GameBuddiesHub/client/src/config/gameMeta.ts` (hub config)
+- `GameBuddiesHub/client/src/services/colyseusService.ts`
+- `GameBuddieGamesServer/games/hub/plugin.ts` (Socket.IO plugin)
+
+## Current Architecture
+
+```
+Hub Client (port 5200)                    Server (ports 3001, 3002)
+├── HomePage - Create/join room          ├── Socket.IO /hub namespace
+├── LobbyPage - Video chat               │   └── games/hub/plugin.ts
+└── GamePage - Phaser canvas             │
+    └── PhaserGame.tsx                   └── Colyseus 'hub' room
+        └── colyseusService.ts               └── games/hub/HubRoom.ts
+            └── game/scenes/Game.ts
+```

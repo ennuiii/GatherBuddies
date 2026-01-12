@@ -19,8 +19,8 @@ Client (GameBuddiesTemplate pattern)     Server (GameBuddieGamesServer)
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [x] **Phase 1: Foundation** - Standalone Colyseus server + Phaser client (COMPLETED but needs migration)
-- [ ] **Phase 1.5: Integration** - Migrate to GameBuddieGamesServer + GameBuddiesTemplate structure
+- [x] **Phase 1: Foundation** - Standalone Colyseus server + Phaser client (COMPLETED - migrated)
+- [x] **Phase 1.5: Integration** - Migrate to GameBuddieGamesServer + GameBuddiesTemplate structure (COMPLETE)
 - [ ] **Phase 2: Social Features** - Proximity video chat, text chat, online players UI
 - [ ] **Phase 3: Game Integration** - Portal zones and game launching via URLs
 
@@ -48,9 +48,9 @@ Plans completed:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 1.5-01: Add Colyseus to GameBuddieGamesServer
-- [ ] 1.5-02: Create Hub client from GameBuddiesTemplate
-- [ ] 1.5-03: Integrate Phaser into GamePage
+- [x] 1.5-01: Add Colyseus to GameBuddieGamesServer
+- [x] 1.5-02: Create Hub client from GameBuddiesTemplate
+- [x] 1.5-03: Integrate Phaser into GamePage
 
 Key deliverables:
 - Colyseus Server on port 3002 (separate from Socket.IO 3001)
@@ -92,7 +92,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
-| 1.5. Integration | 0/3 | Ready to execute | - |
+| 1.5. Integration | 3/3 | Complete | 2026-01-12 |
 | 2. Social Features | 0/TBD | Not started | - |
 | 3. Game Integration | 0/TBD | Not started | - |
 
@@ -105,9 +105,9 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 - Test each piece as it's migrated
 
 **What to Reuse from Phase 1:**
-- `HubRoom` schema and logic → GameBuddieGamesServer/games/hub/
-- `Bootstrap.ts`, `Game.ts` scenes → Hub client GamePage
-- `Player.ts`, `MyPlayer.ts`, `OtherPlayer.ts` → Hub client characters/
-- `CharacterAnims.ts` → Hub client anims/
-- `Network.ts` → Adapt for Colyseus inside unified server
-- Assets (tilemap, sprites) → Hub client public/
+- `HubRoom` schema and logic → ✅ GameBuddieGamesServer/games/hub/ (1.5-01)
+- `Bootstrap.ts`, `Game.ts` scenes → Hub client GamePage (1.5-03)
+- `Player.ts`, `MyPlayer.ts`, `OtherPlayer.ts` → Hub client characters/ (1.5-03)
+- `CharacterAnims.ts` → Hub client anims/ (1.5-03)
+- `Network.ts` → Adapt for Colyseus inside unified server (1.5-03)
+- Assets (tilemap, sprites) → Hub client public/ (1.5-03)
