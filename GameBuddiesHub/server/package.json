@@ -1,0 +1,25 @@
+{
+  "name": "gamebuddies-hub-server",
+  "version": "1.0.0",
+  "description": "GameBuddies Hub Colyseus Server",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "dev": "ts-node-dev --project tsconfig.json --respawn --transpile-only index.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "dependencies": {
+    "@colyseus/command": "^0.1.7",
+    "@colyseus/monitor": "^0.14.0",
+    "@colyseus/schema": "^1.0.28",
+    "colyseus": "^0.14.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.13"
+  }
+}

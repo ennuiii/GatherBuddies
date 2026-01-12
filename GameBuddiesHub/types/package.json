@@ -1,0 +1,15 @@
+{
+  "name": "gamebuddies-hub-types",
+  "version": "1.0.0",
+  "description": "Shared type definitions for GameBuddies Hub",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "dependencies": {
+    "@colyseus/schema": "^1.0.28"
+  }
+}
