@@ -3,6 +3,8 @@ import { Dispatcher } from '@colyseus/command'
 import { Player, HubState } from './schema/HubState'
 import { Message } from '../../types/Messages'
 import { IRoomData } from '../../types/Rooms'
+import PlayerUpdateCommand from './commands/PlayerUpdateCommand'
+import PlayerUpdateNameCommand from './commands/PlayerUpdateNameCommand'
 
 export class HubRoom extends Room<HubState> {
   private dispatcher = new Dispatcher(this)
@@ -18,7 +20,27 @@ export class HubRoom extends Room<HubState> {
     this.setMetadata({ name, description })
     this.setState(new HubState())
 
-    // Message handlers will be added in Task 3
+    // Handle player position/animation updates
+    this.onMessage(
+      Message.UPDATE_PLAYER,
+      (client, message: { x: number; y: number; anim: string }) => {
+        this.dispatcher.dispatch(new PlayerUpdateCommand(), {
+          client,
+          x: message.x,
+          y: message.y,
+          anim: message.anim,
+        })
+      }
+    )
+
+    // Handle player name updates
+    this.onMessage(Message.UPDATE_PLAYER_NAME, (client, message: { name: string }) => {
+      this.dispatcher.dispatch(new PlayerUpdateNameCommand(), {
+        client,
+        name: message.name,
+      })
+    })
+
     console.log(`HubRoom "${name}" created`)
   }
 
