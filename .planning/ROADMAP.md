@@ -27,7 +27,7 @@ None
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Server foundation - Colyseus setup with HubRoom
+- [x] 01-01: Server foundation - Colyseus setup with HubRoom
 - [ ] 01-02: Client foundation - Phaser world with avatar movement
 
 Key deliverables:
@@ -72,6 +72,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Ready to execute | - |
+| 1. Foundation | 1/2 | In progress | - |
 | 2. Social Features | 0/TBD | Not started | - |
 | 3. Game Integration | 0/TBD | Not started | - |
