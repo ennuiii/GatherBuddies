@@ -3,6 +3,14 @@
  *
  * Main game scene - renders the 2D virtual world.
  * Creates tilemap, handles player movement, syncs with Colyseus.
+ *
+ * Colyseus Integration:
+ * - Gets room from Phaser registry (set by PhaserGame component)
+ * - Creates MyPlayer when local player appears in state.players
+ * - Creates OtherPlayer for each remote player
+ * - Sends movement updates via room.send(HubMessage.UPDATE_PLAYER)
+ * - Receives position updates via player.onChange()
+ * - Handles player join/leave via state.players.onAdd/onRemove
  */
 
 import Phaser from 'phaser';
