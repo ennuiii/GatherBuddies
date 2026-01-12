@@ -44,23 +44,20 @@ Plans completed:
 ### Phase 1.5: Integration (NEW)
 **Goal**: Migrate standalone implementation into GameBuddies platform infrastructure
 **Depends on**: Phase 1
-**Research**: May need to investigate Colyseus + Socket.IO coexistence
-**Plans**: 3-4 plans
+**Research**: Complete - Colyseus runs on port 3002, Socket.IO on 3001
+**Plans**: 3 plans
+
+Plans:
+- [ ] 1.5-01: Add Colyseus to GameBuddieGamesServer
+- [ ] 1.5-02: Create Hub client from GameBuddiesTemplate
+- [ ] 1.5-03: Integrate Phaser into GamePage
 
 Key deliverables:
-- Colyseus Server integrated into GameBuddieGamesServer
-  - Add colyseus dependency
-  - Share httpServer between Socket.IO and Colyseus
-  - Create HubRoom for 2D world state
-- Hub GamePlugin for Socket.IO namespace
-  - Room creation/joining via template flow
-  - Coordinates with Colyseus room
-- Client restructured to GameBuddiesTemplate pattern
-  - Copy template client structure
-  - HomePage: create/join hub
-  - LobbyPage: standard lobby with video
-  - GamePage: Phaser3 canvas
-- Reuse existing Phaser code (scenes, characters, animations)
+- Colyseus Server on port 3002 (separate from Socket.IO 3001)
+- HubRoom for 2D world state sync
+- Hub client using GameBuddiesTemplate structure
+- Phaser3 canvas in GamePage component
+- Multiplayer avatar movement via Colyseus
 
 ### Phase 2: Social Features
 **Goal**: Proximity-based communication enabling players to meet and chat naturally
@@ -95,7 +92,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
-| 1.5. Integration | 0/TBD | Not started | - |
+| 1.5. Integration | 0/3 | Ready to execute | - |
 | 2. Social Features | 0/TBD | Not started | - |
 | 3. Game Integration | 0/TBD | Not started | - |
 
