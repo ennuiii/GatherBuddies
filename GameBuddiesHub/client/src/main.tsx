@@ -1,14 +1,18 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { Provider } from 'react-redux'
-import App from './App'
-import store from './stores'
-import './index.css'
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './styles/unified.css';
+import './styles/PhaserGame.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <App />
-    </Provider>
-  </React.StrictMode>,
-)
+// Register service worker for PWA support (production only)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/template/sw.js').catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+
+// Note: StrictMode removed to prevent socket double-connection issues
+// React StrictMode causes useEffect to run twice in development, which
+// interferes with WebSocket connections
+createRoot(document.getElementById('root')!).render(<App />);
