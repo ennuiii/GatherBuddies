@@ -51,6 +51,8 @@ export default class Game extends Phaser.Scene {
   private playerName: string = 'Player';
   private overlappingPlayers: Set<string> = new Set();
   private currentFrameOverlaps: Set<string> = new Set();
+  private conversationGraphics!: Phaser.GameObjects.Graphics;
+  private lastIndicatorUpdate = 0;
 
   constructor() {
     super('game');
@@ -115,6 +117,10 @@ export default class Game extends Phaser.Scene {
 
     // Create other players group
     this.otherPlayers = this.physics.add.group({ classType: OtherPlayer });
+
+    // Graphics layer for conversation indicators
+    this.conversationGraphics = this.add.graphics();
+    this.conversationGraphics.setDepth(999);
 
     // Set up camera
     this.cameras.main.zoom = 1.5;
@@ -338,7 +344,66 @@ export default class Game extends Phaser.Scene {
     }
   }
 
-  update(_t: number, dt: number) {
+  private drawConversationIndicators(): void {
+    this.conversationGraphics.clear();
+
+    const state = this.room.state as any;
+    const conversations = new Map<string, { players: Array<{ x: number; y: number }>; locked: boolean }>();
+
+    // Group players by conversationId
+    state.players.forEach((player: any, sessionId: string) => {
+      if (!player.conversationId) return;
+
+      let conv = conversations.get(player.conversationId);
+      if (!conv) {
+        // Find conversation locked state
+        const convState = state.conversations?.get(player.conversationId);
+        conv = { players: [], locked: convState?.locked || false };
+        conversations.set(player.conversationId, conv);
+      }
+
+      // Get player position
+      if (sessionId === this.room.sessionId && this.myPlayer) {
+        conv.players.push({ x: this.myPlayer.x, y: this.myPlayer.y });
+      } else if (this.otherPlayerMap.has(sessionId)) {
+        const other = this.otherPlayerMap.get(sessionId)!;
+        conv.players.push({ x: other.x, y: other.y });
+      }
+    });
+
+    // Draw indicator for each conversation
+    conversations.forEach((conv) => {
+      if (conv.players.length < 2) return;
+
+      // Calculate center
+      let centerX = 0;
+      let centerY = 0;
+      conv.players.forEach((p) => {
+        centerX += p.x;
+        centerY += p.y;
+      });
+      centerX /= conv.players.length;
+      centerY /= conv.players.length;
+
+      // Calculate radius to encompass all players + padding
+      let maxDist = 0;
+      conv.players.forEach((p) => {
+        const dist = Math.sqrt((p.x - centerX) ** 2 + (p.y - centerY) ** 2);
+        if (dist > maxDist) maxDist = dist;
+      });
+      const radius = maxDist + 40; // padding
+
+      // Draw circle (red for locked, green for open)
+      this.conversationGraphics.lineStyle(3, conv.locked ? 0xff6b6b : 0x4caf50, 0.6);
+      this.conversationGraphics.strokeCircle(centerX, centerY, radius);
+
+      // Fill with semi-transparent color
+      this.conversationGraphics.fillStyle(conv.locked ? 0xff6b6b : 0x4caf50, 0.1);
+      this.conversationGraphics.fillCircle(centerX, centerY, radius);
+    });
+  }
+
+  update(t: number, dt: number) {
     if (this.myPlayer && this.cursors) {
       this.myPlayer.update(this.cursors);
     }
@@ -366,5 +431,11 @@ export default class Game extends Phaser.Scene {
         player.resetDisconnectBuffer();
       }
     });
+
+    // Update conversation indicators periodically (throttle to every 100ms)
+    if (t - this.lastIndicatorUpdate > 100) {
+      this.drawConversationIndicators();
+      this.lastIndicatorUpdate = t;
+    }
   }
 }
