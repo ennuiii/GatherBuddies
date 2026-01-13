@@ -16,8 +16,8 @@ import { ChatWindow, PlayerList } from '../components/lobby';
 import { MobileDrawer } from '../components/mobile';
 import type { DrawerContent } from '../components/mobile';
 import { useWebRTC } from '../contexts/WebRTCContext';
-import { useIsMobile } from '../hooks/useIsMobile';
-import { PhaserGame } from '../components/game';
+import { useIsMobile, useConversationVideo } from '../hooks';
+import { PhaserGame, VideoGrid, ChatInput } from '../components/game';
 
 interface GamePageProps {
   lobby: Lobby;
@@ -42,6 +42,9 @@ const GamePage: React.FC<GamePageProps> = ({
 
   const { prepareVideoChat, isVideoChatActive, disableVideoChat } = useWebRTC();
   const isMobile = useIsMobile();
+
+  // Activate conversation-based video connections
+  useConversationVideo();
 
   // Track unread messages when chat tab is not active (desktop sidebar)
   useEffect(() => {
@@ -132,26 +135,40 @@ const GamePage: React.FC<GamePageProps> = ({
           </div>{/* end main-scroll-area */}
 
           {/* right-sidebar: Desktop sidebar */}
-          <aside className="right-sidebar desktop-only">
-            <SidebarTabs
-              activeTab={activeSidebarTab}
-              onTabChange={setActiveSidebarTab}
-              playerCount={lobby.players.filter(p => p.connected).length}
-              unreadCount={unreadCount}
-            >
-              {activeSidebarTab === 'players' ? (
-                <PlayerList
-                  players={lobby.players}
-                  mySocketId={lobby.mySocketId}
-                />
-              ) : (
-                <ChatWindow
-                  messages={messages}
-                  roomCode={lobby.code}
-                  mySocketId={lobby.mySocketId}
-                />
-              )}
-            </SidebarTabs>
+          <aside className="right-sidebar desktop-only flex flex-col h-full">
+            {/* Video Grid at top */}
+            <div className="p-2">
+              <h3 className="text-white text-sm font-medium mb-2">Video Chat</h3>
+              <VideoGrid maxVideos={4} />
+            </div>
+
+            {/* Players/Chat tabs in middle */}
+            <div className="flex-1 overflow-hidden">
+              <SidebarTabs
+                activeTab={activeSidebarTab}
+                onTabChange={setActiveSidebarTab}
+                playerCount={lobby.players.filter(p => p.connected).length}
+                unreadCount={unreadCount}
+              >
+                {activeSidebarTab === 'players' ? (
+                  <PlayerList
+                    players={lobby.players}
+                    mySocketId={lobby.mySocketId}
+                  />
+                ) : (
+                  <ChatWindow
+                    messages={messages}
+                    roomCode={lobby.code}
+                    mySocketId={lobby.mySocketId}
+                  />
+                )}
+              </SidebarTabs>
+            </div>
+
+            {/* Chat input at bottom */}
+            <div className="p-2 border-t border-gray-700">
+              <ChatInput />
+            </div>
           </aside>
         </div>{/* end game-content-wrapper */}
       </div>{/* end app-layout */}
