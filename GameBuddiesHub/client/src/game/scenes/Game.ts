@@ -643,33 +643,33 @@ export default class Game extends Phaser.Scene {
    * Each cabinet represents a different game that can be launched.
    */
   private createArcadeCabinets() {
-    // DDF arcade cabinet
+    // DDF arcade cabinet - upper right area, away from chairs
     const ddfCabinet = new ArcadeCabinet(
       this,
+      750,
       300,
-      400,
       'arcade_cabinet',
       0,
       { gameType: 'ddf', gameName: 'DDF' }
     );
     this.cabinetGroup.add(ddfCabinet);
-    ddfCabinet.setDepth(400);
+    ddfCabinet.setDepth(300);
     this.add.existing(ddfCabinet);
 
-    // School Quiz arcade cabinet
+    // School Quiz arcade cabinet - further right, same row
     const schoolQuizCabinet = new ArcadeCabinet(
       this,
-      500,
-      400,
+      900,
+      300,
       'arcade_cabinet',
       0,
       { gameType: 'schoolquiz', gameName: 'School Quiz' }
     );
     this.cabinetGroup.add(schoolQuizCabinet);
-    schoolQuizCabinet.setDepth(400);
+    schoolQuizCabinet.setDepth(300);
     this.add.existing(schoolQuizCabinet);
 
-    console.log('[Game] Created 2 arcade cabinets at (300,400) and (500,400)');
+    console.log('[Game] Created 2 arcade cabinets at (750,300) and (900,300)');
   }
 
   private handleChairOverlap(
