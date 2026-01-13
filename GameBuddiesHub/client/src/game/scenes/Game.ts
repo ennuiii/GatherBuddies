@@ -21,6 +21,7 @@ import OtherPlayer from '../characters/OtherPlayer';
 import '../characters/MyPlayer';
 import '../characters/OtherPlayer';
 import { phaserEvents } from '../events/EventCenter';
+import ArcadeCabinet from '../items/ArcadeCabinet';
 import Chair from '../items/Chair';
 import PlayerSelector from '../items/PlayerSelector';
 
@@ -73,6 +74,7 @@ export default class Game extends Phaser.Scene {
   private keyE!: Phaser.Input.Keyboard.Key;
   private playerSelector!: PlayerSelector;
   private chairGroup!: Phaser.Physics.Arcade.StaticGroup;
+  private cabinetGroup!: Phaser.Physics.Arcade.StaticGroup;
   private selectedCharacter: string = 'adam';
 
   // Character selection UI state
@@ -153,6 +155,10 @@ export default class Game extends Phaser.Scene {
     // Create chair group and player selector for interactive chairs
     this.chairGroup = this.physics.add.staticGroup({ classType: Chair });
     this.addChairsFromTiled('Chair', 'chairs', 'chair');
+
+    // Create arcade cabinet group and add cabinets programmatically
+    this.cabinetGroup = this.physics.add.staticGroup({ classType: ArcadeCabinet });
+    this.createArcadeCabinets();
 
     // Create player selector (invisible zone that detects items in front of player)
     this.playerSelector = new PlayerSelector(this, 0, 0, 32, 32);
@@ -537,6 +543,15 @@ export default class Game extends Phaser.Scene {
       this
     );
 
+    // Add arcade cabinet overlap detection
+    this.physics.add.overlap(
+      this.playerSelector,
+      this.cabinetGroup,
+      this.handleCabinetOverlap,
+      undefined,
+      this
+    );
+
     // Add proximity detection overlap
     this.physics.add.overlap(
       this.myPlayer,
@@ -623,6 +638,40 @@ export default class Game extends Phaser.Scene {
     console.log(`[Game] Added ${objectLayer.objects.length} chairs from "${objectLayerName}"`);
   }
 
+  /**
+   * Create arcade cabinets programmatically at predefined positions.
+   * Each cabinet represents a different game that can be launched.
+   */
+  private createArcadeCabinets() {
+    // DDF arcade cabinet
+    const ddfCabinet = new ArcadeCabinet(
+      this,
+      300,
+      400,
+      'arcade_cabinet',
+      0,
+      { gameType: 'ddf', gameName: 'DDF' }
+    );
+    this.cabinetGroup.add(ddfCabinet);
+    ddfCabinet.setDepth(400);
+    this.add.existing(ddfCabinet);
+
+    // School Quiz arcade cabinet
+    const schoolQuizCabinet = new ArcadeCabinet(
+      this,
+      500,
+      400,
+      'arcade_cabinet',
+      0,
+      { gameType: 'schoolquiz', gameName: 'School Quiz' }
+    );
+    this.cabinetGroup.add(schoolQuizCabinet);
+    schoolQuizCabinet.setDepth(400);
+    this.add.existing(schoolQuizCabinet);
+
+    console.log('[Game] Created 2 arcade cabinets at (300,400) and (500,400)');
+  }
+
   private handleChairOverlap(
     _playerSelector: Phaser.Types.Physics.Arcade.GameObjectWithBody,
     chairObj: Phaser.Types.Physics.Arcade.GameObjectWithBody
@@ -637,6 +686,23 @@ export default class Game extends Phaser.Scene {
       // Set new selection and show dialog
       this.playerSelector.selectedItem = chair;
       chair.onOverlapDialog();
+    }
+  }
+
+  private handleCabinetOverlap(
+    _playerSelector: Phaser.Types.Physics.Arcade.GameObjectWithBody,
+    cabinetObj: Phaser.Types.Physics.Arcade.GameObjectWithBody
+  ) {
+    const cabinet = cabinetObj as ArcadeCabinet;
+
+    // Only show dialog if not already selecting this cabinet
+    if (this.playerSelector.selectedItem !== cabinet) {
+      // Clear previous selection dialog
+      this.playerSelector.selectedItem?.clearDialogBox();
+
+      // Set new selection and show dialog
+      this.playerSelector.selectedItem = cabinet;
+      cabinet.onOverlapDialog();
     }
   }
 
@@ -748,6 +814,26 @@ export default class Game extends Phaser.Scene {
   update(t: number, dt: number) {
     if (this.myPlayer && this.cursors) {
       this.myPlayer.update(this.cursors, this.keyE, this.playerSelector);
+    }
+
+    // Handle E key interaction with arcade cabinets
+    if (this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      const selectedItem = this.playerSelector.selectedItem;
+      if (selectedItem instanceof ArcadeCabinet) {
+        // Get nearby players for the game launch
+        const nearbyPlayers: string[] = [this.room.sessionId];
+        this.overlappingPlayers.forEach((playerId) => {
+          nearbyPlayers.push(playerId);
+        });
+
+        // Emit cabinet interaction event
+        phaserEvents.emit('cabinet:interact', {
+          gameType: selectedItem.gameType,
+          gameName: selectedItem.gameName,
+          nearbyPlayers: nearbyPlayers
+        });
+        console.log('[Game] Cabinet interaction:', selectedItem.gameType, 'nearbyPlayers:', nearbyPlayers);
+      }
     }
 
     // Check for disconnections - players who were overlapping but aren't now
