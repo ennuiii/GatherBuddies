@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Phaser from 'phaser';
-import { Bootstrap, CharacterSelect, Game } from '../../game/scenes';
+import { Bootstrap, Game } from '../../game/scenes';
 import { colyseusService } from '../../services/colyseusService';
 
 interface PhaserGameProps {
@@ -52,7 +52,7 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
             debug: false,
           },
         },
-        scene: [Bootstrap, CharacterSelect, Game],
+        scene: [Bootstrap, Game],
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,

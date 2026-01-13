@@ -84,11 +84,11 @@ export default class Bootstrap extends Phaser.Scene {
     // Assets are preloaded, launch game scene
     // The Colyseus room should already be in the registry (set by PhaserGame component)
     if (this.preloadComplete) {
-      this.scene.start('characterSelect');
+      this.scene.start('game');
     } else {
       // Wait for assets to load
       this.load.once('complete', () => {
-        this.scene.start('characterSelect');
+        this.scene.start('game');
       });
     }
   }
