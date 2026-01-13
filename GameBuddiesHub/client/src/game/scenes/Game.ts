@@ -219,6 +219,38 @@ export default class Game extends Phaser.Scene {
       console.log('[Game] Player removed:', sessionId);
       this.handlePlayerLeft(sessionId);
     });
+
+    // Listen for new chat messages
+    state.chatMessages.onAdd((message: any, _index: number) => {
+      console.log('[Game] New chat message:', message.author, message.content);
+
+      // Find the player who sent this message and show speech bubble
+      let senderPlayer: import('../characters/Player').default | undefined;
+
+      // Check if it's from local player
+      const myPlayerState = state.players.get(this.room.sessionId);
+      if (myPlayerState && myPlayerState.name === message.author) {
+        senderPlayer = this.myPlayer;
+      } else {
+        // Find in other players
+        state.players.forEach((player: any, sessionId: string) => {
+          if (player.name === message.author && this.otherPlayerMap.has(sessionId)) {
+            senderPlayer = this.otherPlayerMap.get(sessionId);
+          }
+        });
+      }
+
+      if (senderPlayer) {
+        senderPlayer.updateDialogBubble(message.content);
+      }
+
+      // Emit to React for chat panel
+      phaserEvents.emit('chat:message', {
+        author: message.author,
+        content: message.content,
+        createdAt: message.createdAt
+      });
+    });
   }
 
   private handlePlayerJoined(newPlayer: PlayerState, id: string) {
