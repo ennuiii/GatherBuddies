@@ -8,6 +8,7 @@
 import { useEffect, useRef } from 'react';
 import { useWebRTC } from '../contexts/WebRTCContext';
 import colyseusService from '../services/colyseusService';
+import { conversationAudioRouter } from '../services/conversationAudioRouter';
 
 /**
  * Hook that connects/disconnects video based on conversation membership.
@@ -41,10 +42,23 @@ export function useConversationVideo() {
         // Conversation changed
         const oldPeers = new Set(currentPeersRef.current);
 
+        // Update audio router with my new conversation ID
+        conversationAudioRouter.setMyConversation(newConversationId);
+
         if (newConversationId === '') {
           // Left conversation - disconnect from all peers
           disconnectFromConversationPeers([...oldPeers]);
           currentPeersRef.current.clear();
+
+          // Update all remote audio to muted (not in any conversation)
+          state.players?.forEach((player: any, sessionId: string) => {
+            if (sessionId !== mySessionId) {
+              conversationAudioRouter.updateConversationMembership(
+                sessionId,
+                player.conversationId || ''
+              );
+            }
+          });
         } else {
           // Joined/changed conversation - find new peers
           const newPeers = new Set<string>();
@@ -67,6 +81,16 @@ export function useConversationVideo() {
           }
 
           currentPeersRef.current = newPeers;
+
+          // Update audio routing for all remote players
+          state.players?.forEach((player: any, sessionId: string) => {
+            if (sessionId !== mySessionId) {
+              conversationAudioRouter.updateConversationMembership(
+                sessionId,
+                player.conversationId || ''
+              );
+            }
+          });
         }
 
         currentConversationRef.current = newConversationId;
