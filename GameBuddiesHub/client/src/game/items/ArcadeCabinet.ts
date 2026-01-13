@@ -20,6 +20,7 @@ export default class ArcadeCabinet extends Item {
   gameType: string;
   gameName: string;
   gameIcon?: string;
+  private nameLabel!: Phaser.GameObjects.Text;
 
   constructor(
     scene: Phaser.Scene,
@@ -36,8 +37,17 @@ export default class ArcadeCabinet extends Item {
     this.gameName = config?.gameName || 'Arcade Game';
     this.gameIcon = config?.gameIcon;
 
-    // Note: ItemType enum doesn't have ARCADE_CABINET yet
-    // We could extend the enum but for now we just don't set itemType
+    // Create permanent name label above the cabinet
+    this.nameLabel = scene.add.text(x, y - 50, this.gameName, {
+      fontSize: '12px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      backgroundColor: '#000000bb',
+      padding: { x: 6, y: 3 },
+      align: 'center',
+    });
+    this.nameLabel.setOrigin(0.5, 1);
+    this.nameLabel.setDepth(y + 1000); // Always above the cabinet
   }
 
   /**
@@ -62,9 +72,24 @@ export default class ArcadeCabinet extends Item {
   }
 
   /**
+   * Override setPosition to also move the label
+   */
+  setPosition(x?: number, y?: number, z?: number, w?: number): this {
+    super.setPosition(x, y, z, w);
+    if (this.nameLabel && x !== undefined && y !== undefined) {
+      this.nameLabel.setPosition(x, y - 50);
+      this.nameLabel.setDepth(y + 1000);
+    }
+    return this;
+  }
+
+  /**
    * Clean up resources
    */
   destroy(fromScene?: boolean) {
+    if (this.nameLabel) {
+      this.nameLabel.destroy();
+    }
     super.destroy(fromScene);
   }
 }
