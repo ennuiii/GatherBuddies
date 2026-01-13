@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Phaser from 'phaser';
-import { Bootstrap, Game } from '../../game/scenes';
+import { Bootstrap, CharacterSelect, Game } from '../../game/scenes';
 import { colyseusService } from '../../services/colyseusService';
 
 interface PhaserGameProps {
@@ -23,7 +23,10 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('[PhaserGame] Render - roomCode:', roomCode, 'playerName:', playerName);
+
   const initializeGame = useCallback(async () => {
+    console.log('[PhaserGame] initializeGame called - containerRef:', !!containerRef.current, 'gameRef:', !!gameRef.current);
     if (!containerRef.current || gameRef.current) return;
 
     try {
@@ -49,7 +52,7 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
             debug: false,
           },
         },
-        scene: [Bootstrap, Game],
+        scene: [Bootstrap, CharacterSelect, Game],
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -79,6 +82,7 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
   }, [roomCode, playerName, onReady, onError]);
 
   useEffect(() => {
+    console.log('[PhaserGame] useEffect triggered - calling initializeGame');
     initializeGame();
 
     return () => {
@@ -105,32 +109,30 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  if (error) {
-    return (
-      <div className="phaser-game-container phaser-game-error">
-        <div className="phaser-error-content">
-          <h3>Connection Error</h3>
-          <p>{error}</p>
-          <button onClick={initializeGame} className="phaser-retry-btn">
-            Retry Connection
-          </button>
+  // Always render the container with ref - overlay loading/error states
+  return (
+    <div ref={containerRef} className="phaser-game-container">
+      {error && (
+        <div className="phaser-game-overlay phaser-game-error">
+          <div className="phaser-error-content">
+            <h3>Connection Error</h3>
+            <p>{error}</p>
+            <button onClick={initializeGame} className="phaser-retry-btn">
+              Retry Connection
+            </button>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  if (isConnecting) {
-    return (
-      <div className="phaser-game-container phaser-game-loading">
-        <div className="phaser-loading-content">
-          <div className="phaser-spinner" />
-          <p>Connecting to virtual world...</p>
+      )}
+      {isConnecting && !error && (
+        <div className="phaser-game-overlay phaser-game-loading">
+          <div className="phaser-loading-content">
+            <div className="phaser-spinner" />
+            <p>Connecting to virtual world...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  return <div ref={containerRef} className="phaser-game-container" />;
+      )}
+    </div>
+  );
 }
 
 export default PhaserGame;

@@ -21,6 +21,8 @@ import OtherPlayer from '../characters/OtherPlayer';
 import '../characters/MyPlayer';
 import '../characters/OtherPlayer';
 import { phaserEvents } from '../events/EventCenter';
+import Chair from '../items/Chair';
+import PlayerSelector from '../items/PlayerSelector';
 
 interface NavKeys {
   up: Phaser.Input.Keyboard.Key;
@@ -53,6 +55,11 @@ export default class Game extends Phaser.Scene {
   private currentFrameOverlaps: Set<string> = new Set();
   private conversationGraphics!: Phaser.GameObjects.Graphics;
   private lastIndicatorUpdate = 0;
+  private collidableGroups: Phaser.Physics.Arcade.StaticGroup[] = []; // Store groups for collision
+  private keyE!: Phaser.Input.Keyboard.Key;
+  private playerSelector!: PlayerSelector;
+  private chairGroup!: Phaser.Physics.Arcade.StaticGroup;
+  private selectedCharacter: string = 'adam';
 
   constructor() {
     super('game');
@@ -61,6 +68,8 @@ export default class Game extends Phaser.Scene {
   init() {
     // Get player name from registry (set by PhaserGame component)
     this.playerName = this.registry.get('playerName') || 'Player';
+    // Get selected character from registry (set by CharacterSelect scene)
+    this.selectedCharacter = this.registry.get('selectedCharacter') || 'adam';
   }
 
   registerKeys() {
@@ -73,6 +82,8 @@ export default class Game extends Phaser.Scene {
         D: Phaser.Input.Keyboard.Key;
       }),
     };
+    // Register E key for interactions (sit on chairs, etc.)
+    this.keyE = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.input.keyboard!.disableGlobalCapture();
   }
 
@@ -114,6 +125,13 @@ export default class Game extends Phaser.Scene {
 
     // Add basement objects
     this.addGroupFromTiled('Basement', 'basement', 'Basement', true);
+
+    // Create chair group and player selector for interactive chairs
+    this.chairGroup = this.physics.add.staticGroup({ classType: Chair });
+    this.addChairsFromTiled('Chair', 'chairs', 'chair');
+
+    // Create player selector (invisible zone that detects items in front of player)
+    this.playerSelector = new PlayerSelector(this, 0, 0, 32, 32);
 
     // Create other players group
     this.otherPlayers = this.physics.add.group({ classType: OtherPlayer });
@@ -170,7 +188,7 @@ export default class Game extends Phaser.Scene {
         const spawnX = player.x || 705;
         const spawnY = player.y || 500;
 
-        this.myPlayer = this.add.myPlayer(spawnX, spawnY, 'adam', sessionId);
+        this.myPlayer = this.add.myPlayer(spawnX, spawnY, this.selectedCharacter, sessionId);
         this.myPlayer.setPlayerName(this.playerName);
 
         // Set camera to follow player
@@ -189,6 +207,21 @@ export default class Game extends Phaser.Scene {
         if (groundLayer) {
           this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], groundLayer);
         }
+
+        // Add collisions with all stored collidable object groups
+        this.collidableGroups.forEach(group => {
+          this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], group);
+        });
+        console.log('[Game] Added collisions with', this.collidableGroups.length, 'object groups');
+
+        // Add chair overlap detection - when player selector overlaps a chair, show dialog
+        this.physics.add.overlap(
+          this.playerSelector,
+          this.chairGroup,
+          this.handleChairOverlap,
+          undefined,
+          this
+        );
 
         // Add proximity detection overlap
         this.physics.add.overlap(
@@ -261,10 +294,12 @@ export default class Game extends Phaser.Scene {
       return;
     }
 
+    // TODO: Get character from player state when server tracks selection
+    const otherCharacter = 'adam';
     const otherPlayer = this.add.otherPlayer(
       newPlayer.x || 705,
       newPlayer.y || 500,
-      'adam',
+      otherCharacter,
       id,
       newPlayer.name || 'Player'
     );
@@ -297,7 +332,7 @@ export default class Game extends Phaser.Scene {
     objectLayerName: string,
     key: string,
     tilesetName: string,
-    _collidable: boolean
+    collidable: boolean
   ) {
     const group = this.physics.add.staticGroup();
     const objectLayer = this.map.getObjectLayer(objectLayerName);
@@ -319,7 +354,68 @@ export default class Game extends Phaser.Scene {
       group.get(actualX, actualY, key, object.gid! - tileset.firstgid).setDepth(actualY);
     });
 
+    // Store collidable groups to add collision after player is created
+    if (collidable && group.getLength() > 0) {
+      this.collidableGroups.push(group);
+    }
+
     return group;
+  }
+
+  private addChairsFromTiled(
+    objectLayerName: string,
+    key: string,
+    tilesetName: string
+  ) {
+    const objectLayer = this.map.getObjectLayer(objectLayerName);
+
+    if (!objectLayer) {
+      console.log(`[Game] No chair layer "${objectLayerName}" found in tilemap`);
+      return;
+    }
+
+    const tileset = this.map.getTileset(tilesetName);
+    if (!tileset) {
+      console.warn(`[Game] Tileset "${tilesetName}" not found for chairs`);
+      return;
+    }
+
+    objectLayer.objects.forEach((object) => {
+      const actualX = object.x! + object.width! * 0.5;
+      const actualY = object.y! - object.height! * 0.5;
+
+      // Create chair at the object position
+      const chair = this.chairGroup.get(actualX, actualY, key, object.gid! - tileset.firstgid) as Chair;
+
+      if (chair) {
+        chair.setDepth(actualY);
+
+        // Get chair direction from object properties
+        const directionProp = object.properties?.find(
+          (p: { name: string; value: any }) => p.name === 'direction'
+        );
+        chair.itemDirection = directionProp?.value || 'down';
+      }
+    });
+
+    console.log(`[Game] Added ${objectLayer.objects.length} chairs from "${objectLayerName}"`);
+  }
+
+  private handleChairOverlap(
+    _playerSelector: Phaser.Types.Physics.Arcade.GameObjectWithBody,
+    chairObj: Phaser.Types.Physics.Arcade.GameObjectWithBody
+  ) {
+    const chair = chairObj as Chair;
+
+    // Only show dialog if not already selecting this chair
+    if (this.playerSelector.selectedItem !== chair) {
+      // Clear previous selection dialog
+      this.playerSelector.selectedItem?.clearDialogBox();
+
+      // Set new selection and show dialog
+      this.playerSelector.selectedItem = chair;
+      chair.onOverlapDialog();
+    }
   }
 
   private handlePlayersOverlap(
@@ -329,23 +425,46 @@ export default class Game extends Phaser.Scene {
     const other = otherPlayer as OtherPlayer;
     this.currentFrameOverlaps.add(other.playerId);
 
-    if (!this.overlappingPlayers.has(other.playerId)) {
-      // First time overlapping - update buffer
-      other.updateProximityBuffer(0); // Start counting
-      if (other.checkProximityConnection(this.room.sessionId)) {
+    // Reset disconnect buffer since we're overlapping
+    other.resetDisconnectBuffer();
+
+    // If not yet connected, update proximity buffer (need 750ms of overlap)
+    if (!other.connected) {
+      // Update proximity buffer while overlapping (this accumulates time)
+      other.updateProximityBuffer(this.game.loop.delta);
+
+      // checkProximityConnection will return true when buffer reaches 750ms and we should initiate
+      const shouldConnect = other.checkProximityConnection(this.room.sessionId);
+      if (shouldConnect) {
+        console.log('[Game] Proximity threshold reached for', other.playerId);
         this.overlappingPlayers.add(other.playerId);
 
-        // Send START_CONVERSATION to Colyseus server (Message.START_CONVERSATION = 4)
-        this.room.send(4, { targetSessionId: other.playerId });
-        console.log('[Game] Sent START_CONVERSATION for', other.playerId);
+        // Check if I'm already in a conversation before starting a new one
+        const state = this.room.state as any;
+        const myPlayer = state.players?.get(this.room.sessionId);
+        console.log('[Game] My conversationId:', myPlayer?.conversationId);
+        console.log('[Game] My sessionId:', this.room.sessionId);
+        console.log('[Game] Other playerId:', other.playerId);
+
+        if (!myPlayer?.conversationId) {
+          // Send START_CONVERSATION to Colyseus server (Message.START_CONVERSATION = 4)
+          console.log('[Game] Sending START_CONVERSATION to server...');
+          this.room.send(4, { targetSessionId: other.playerId });
+          console.log('[Game] Sent START_CONVERSATION for', other.playerId);
+        } else {
+          console.log('[Game] Already in conversation, not sending START_CONVERSATION');
+        }
       }
     }
   }
 
   private drawConversationIndicators(): void {
+    // MUST clear before drawing new frame
     this.conversationGraphics.clear();
 
     const state = this.room.state as any;
+    if (!state.players) return;
+
     const conversations = new Map<string, { players: Array<{ x: number; y: number }>; locked: boolean }>();
 
     // Group players by conversationId
@@ -360,17 +479,16 @@ export default class Game extends Phaser.Scene {
         conversations.set(player.conversationId, conv);
       }
 
-      // Get player position
-      if (sessionId === this.room.sessionId && this.myPlayer) {
-        conv.players.push({ x: this.myPlayer.x, y: this.myPlayer.y });
-      } else if (this.otherPlayerMap.has(sessionId)) {
-        const other = this.otherPlayerMap.get(sessionId)!;
-        conv.players.push({ x: other.x, y: other.y });
+      // Get player position - use state positions, not sprite positions
+      const x = player.x;
+      const y = player.y;
+      if (typeof x === 'number' && typeof y === 'number' && !isNaN(x) && !isNaN(y)) {
+        conv.players.push({ x, y });
       }
     });
 
     // Draw indicator for each conversation
-    conversations.forEach((conv) => {
+    conversations.forEach((conv, convId) => {
       if (conv.players.length < 2) return;
 
       // Calculate center
@@ -389,7 +507,11 @@ export default class Game extends Phaser.Scene {
         const dist = Math.sqrt((p.x - centerX) ** 2 + (p.y - centerY) ** 2);
         if (dist > maxDist) maxDist = dist;
       });
-      const radius = maxDist + 40; // padding
+
+      // Clamp radius to reasonable bounds
+      const radius = Math.min(Math.max(maxDist + 40, 50), 200);
+
+      console.log('[Game] Drawing circle:', { convId, centerX, centerY, radius, players: conv.players.length });
 
       // Draw circle (red for locked, green for open)
       this.conversationGraphics.lineStyle(3, conv.locked ? 0xff6b6b : 0x4caf50, 0.6);
@@ -403,18 +525,17 @@ export default class Game extends Phaser.Scene {
 
   update(t: number, dt: number) {
     if (this.myPlayer && this.cursors) {
-      this.myPlayer.update(this.cursors);
+      this.myPlayer.update(this.cursors, this.keyE, this.playerSelector);
     }
 
-    // Clear current frame overlaps (will be repopulated by overlap callback)
-    this.currentFrameOverlaps.clear();
-
     // Check for disconnections - players who were overlapping but aren't now
+    // Note: currentFrameOverlaps is populated by handlePlayersOverlap during physics step
     this.otherPlayerMap.forEach((player, id) => {
       if (this.overlappingPlayers.has(id) && !this.currentFrameOverlaps.has(id)) {
-        // Player was overlapping but isn't now - start disconnect timer
+        // Player was in conversation but walked away - start disconnect timer
         player.updateDisconnectBuffer(dt);
         if (player.shouldDisconnect()) {
+          console.log('[Game] Player walked away, disconnecting:', id);
           player.disconnect();
           this.overlappingPlayers.delete(id);
           phaserEvents.emit('proximity:disconnect', { playerId: id });
@@ -423,16 +544,15 @@ export default class Game extends Phaser.Scene {
           this.room.send(5, {});
           console.log('[Game] Sent LEAVE_CONVERSATION');
         }
-      } else if (!this.currentFrameOverlaps.has(id)) {
-        // Not overlapping - update proximity buffer for potential connection
-        player.updateProximityBuffer(dt);
-      }
-
-      // Reset disconnect buffer if overlapping
-      if (this.currentFrameOverlaps.has(id)) {
-        player.resetDisconnectBuffer();
+      } else if (!this.currentFrameOverlaps.has(id) && !this.overlappingPlayers.has(id)) {
+        // Not overlapping and never connected - reset proximity buffer
+        // (they need to stay near each other for 750ms to connect)
+        player.resetProximityBuffer();
       }
     });
+
+    // Clear current frame overlaps AFTER we've used them (will be repopulated next frame)
+    this.currentFrameOverlaps.clear();
 
     // Update conversation indicators periodically (throttle to every 100ms)
     if (t - this.lastIndicatorUpdate > 100) {
