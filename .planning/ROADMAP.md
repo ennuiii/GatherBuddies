@@ -84,8 +84,13 @@ Key deliverables:
 ### Phase 3: Game Integration
 **Goal**: Portal zones that launch GameBuddies games
 **Depends on**: Phase 2
-**Research**: Minimal (just URL navigation)
-**Plans**: TBD
+**Research**: Complete
+**Status**: In progress
+**Plans**: 2 plans
+
+Plans:
+- [x] 3-01: Arcade Cabinet Portals - Cabinet objects with E key interaction
+- [ ] 3-02: Game Launch UI - React modal for game launching
 
 Key deliverables:
 - Portal zone tiles on the map
@@ -103,7 +108,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
 | 1.5. Integration | 3/3 | Complete | 2026-01-12 |
 | 2. Social Features | 6/6 | Complete | 2026-01-13 |
-| 3. Game Integration | 0/TBD | Not started | - |
+| 3. Game Integration | 1/2 | In progress | - |
 
 ## Notes
 
