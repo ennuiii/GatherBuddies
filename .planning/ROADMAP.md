@@ -63,7 +63,7 @@ Key deliverables:
 **Goal**: Proximity-based communication enabling players to meet and chat naturally
 **Depends on**: Phase 1.5
 **Research**: Complete
-**Status**: In progress (4/6 plans complete)
+**Status**: In progress (5/6 plans complete)
 **Plans**: 6 plans
 
 Plans:
@@ -71,7 +71,7 @@ Plans:
 - [x] 2-02: Conversation State - Server-authoritative conversation lifecycle
 - [x] 2-03: Video Chat Integration
 - [x] 2-04: Audio Routing - Web Audio API gain-based isolation
-- [ ] 2-05: Online Players UI
+- [x] 2-05: Text Chat - Speech bubbles via Phaser, ChatInput component
 - [ ] 2-06: Avatar Selection
 
 Key deliverables:
@@ -102,7 +102,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
 | 1.5. Integration | 3/3 | Complete | 2026-01-12 |
-| 2. Social Features | 4/6 | In progress | - |
+| 2. Social Features | 5/6 | In progress | - |
 | 3. Game Integration | 0/TBD | Not started | - |
 
 ## Notes
