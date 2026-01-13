@@ -5,10 +5,10 @@ type: execute
 ---
 
 <objective>
-Add visual conversation indicators and video grid display.
+Add avatar selection screen in Phaser before entering the hub world.
 
-Purpose: Show conversation boundaries visually in Phaser and display video feeds in a grid panel.
-Output: Conversation circles with lock icons in Phaser, video grid panel in React.
+Purpose: Let players choose their character (adam, ash, lucy, nancy) with a polished visual card UI instead of everyone defaulting to 'adam'.
+Output: CharacterSelect Phaser scene with character cards, scene flow wired to use selection in Game scene.
 </objective>
 
 <execution_context>
@@ -21,306 +21,314 @@ Output: Conversation circles with lock icons in Phaser, video grid panel in Reac
 @.planning/PROJECT.md
 @.planning/ROADMAP.md
 @.planning/STATE.md
-@.planning/phases/2-social-features/2-CONTEXT.md
-@.planning/phases/2-social-features/2-RESEARCH.md
+@.planning/phases/2-06-avatar-selection/2-06-CONTEXT.md
+@.planning/phases/2-social-features/2-05-SUMMARY.md
 
 **Key files:**
+@GameBuddiesHub/client/src/game/scenes/Bootstrap.ts
 @GameBuddiesHub/client/src/game/scenes/Game.ts
-@GameBuddiesHub/client/src/pages/GamePage.tsx
-@GameBuddiesHub/client/src/contexts/WebRTCContext.tsx
+@GameBuddiesHub/client/src/game/characters/MyPlayer.ts
+@GameBuddiesHub/client/src/game/anims/CharacterAnims.ts
 
 **Tech stack available:**
-- Phaser 3 graphics for drawing shapes
-- React + Tailwind for video grid
-- Colyseus state for conversation data
+- Phaser 3 scenes, graphics, text, sprites
+- All 4 character spritesheets already loaded in Bootstrap.ts
 
-**Pattern from research (CONTEXT.md):**
-- Visual circle/line drawn around avatars in conversation
-- Lock icon when conversation is locked
-- Video display: SkyOffice grid approach (NOT filmstrip)
+**From CONTEXT.md:**
+- Phaser overlay (NOT React modal) - part of game experience
+- Full character cards with sprite, name, fun personality description
+- Quick selection flow - get players into game fast
+- Characters: adam, ash, lucy, nancy (all have full animation sets)
 
 **Constraining decisions:**
-- Video grid in side panel (React), not embedded in Phaser canvas
-- Conversation indicators drawn in Phaser scene
-- Join request UI: "Press E to request join" prompt
+- Currently hardcoded to 'adam' at Game.ts:188 and Game.ts:297
+- Scene flow: Bootstrap → Game (need to insert CharacterSelect)
+- Registry used to pass playerName, can also pass selectedCharacter
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Draw conversation indicators in Game scene</name>
-  <files>GameBuddiesHub/client/src/game/scenes/Game.ts</files>
+  <name>Task 1: Create CharacterSelect scene</name>
+  <files>GameBuddiesHub/client/src/game/scenes/CharacterSelect.ts</files>
   <action>
-Add graphics layer for conversation indicators.
+Create a new Phaser scene for character selection with polished card UI.
 
-Add properties:
 ```typescript
-private conversationGraphics!: Phaser.GameObjects.Graphics;
-private lockIcon?: Phaser.GameObjects.Image;
-```
+import Phaser from 'phaser';
 
-In create(), after tilemap setup:
-```typescript
-// Graphics layer for conversation indicators
-this.conversationGraphics = this.add.graphics();
-this.conversationGraphics.setDepth(999);
-
-// Load lock icon if not already loaded (add to Bootstrap preload)
-// For now use a simple shape if image not available
-```
-
-Add method to draw conversation boundaries:
-```typescript
-private drawConversationIndicators(): void {
-  this.conversationGraphics.clear();
-
-  const state = this.room.state as any;
-  const conversations = new Map<string, { players: Array<{x: number, y: number}>, locked: boolean }>();
-
-  // Group players by conversationId
-  state.players.forEach((player: any, sessionId: string) => {
-    if (!player.conversationId) return;
-
-    let conv = conversations.get(player.conversationId);
-    if (!conv) {
-      // Find conversation locked state
-      const convState = state.conversations?.get(player.conversationId);
-      conv = { players: [], locked: convState?.locked || false };
-      conversations.set(player.conversationId, conv);
-    }
-
-    // Get player position
-    if (sessionId === this.room.sessionId && this.myPlayer) {
-      conv.players.push({ x: this.myPlayer.x, y: this.myPlayer.y });
-    } else if (this.otherPlayerMap.has(sessionId)) {
-      const other = this.otherPlayerMap.get(sessionId)!;
-      conv.players.push({ x: other.x, y: other.y });
-    }
-  });
-
-  // Draw indicator for each conversation
-  conversations.forEach((conv, convId) => {
-    if (conv.players.length < 2) return;
-
-    // Calculate center and radius
-    let centerX = 0, centerY = 0;
-    conv.players.forEach(p => {
-      centerX += p.x;
-      centerY += p.y;
-    });
-    centerX /= conv.players.length;
-    centerY /= conv.players.length;
-
-    // Calculate radius to encompass all players + padding
-    let maxDist = 0;
-    conv.players.forEach(p => {
-      const dist = Math.sqrt((p.x - centerX) ** 2 + (p.y - centerY) ** 2);
-      if (dist > maxDist) maxDist = dist;
-    });
-    const radius = maxDist + 40; // padding
-
-    // Draw circle
-    this.conversationGraphics.lineStyle(3, conv.locked ? 0xff6b6b : 0x4CAF50, 0.6);
-    this.conversationGraphics.strokeCircle(centerX, centerY, radius);
-
-    // Fill with semi-transparent
-    this.conversationGraphics.fillStyle(conv.locked ? 0xff6b6b : 0x4CAF50, 0.1);
-    this.conversationGraphics.fillCircle(centerX, centerY, radius);
-
-    // Draw lock icon if locked (simple text for now)
-    if (conv.locked) {
-      // Could use an image, but text works
-      // The lock indicator is already shown by the red color
-    }
-  });
+interface CharacterInfo {
+  key: string;
+  name: string;
+  description: string;
 }
-```
 
-Call drawConversationIndicators() in update() loop (throttle to every 100ms to save perf):
-```typescript
-private lastIndicatorUpdate = 0;
+const CHARACTERS: CharacterInfo[] = [
+  { key: 'adam', name: 'Adam', description: 'The friendly explorer. Always ready for adventure!' },
+  { key: 'ash', name: 'Ash', description: 'Cool and collected. Natural born leader.' },
+  { key: 'lucy', name: 'Lucy', description: 'Creative spirit. Brings joy wherever she goes!' },
+  { key: 'nancy', name: 'Nancy', description: 'Strategic thinker. Always has a plan.' },
+];
 
-update(t: number, dt: number) {
-  // ... existing update code
+export default class CharacterSelect extends Phaser.Scene {
+  private selectedIndex: number = 0;
+  private cards: Phaser.GameObjects.Container[] = [];
+  private confirmText!: Phaser.GameObjects.Text;
 
-  // Update conversation indicators periodically
-  if (t - this.lastIndicatorUpdate > 100) {
-    this.drawConversationIndicators();
-    this.lastIndicatorUpdate = t;
+  constructor() {
+    super('characterSelect');
+  }
+
+  create() {
+    const { width, height } = this.scale;
+
+    // Dark overlay background
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e, 0.95);
+
+    // Title
+    this.add.text(width / 2, 50, 'Choose Your Character', {
+      fontSize: '32px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Create character cards
+    const cardWidth = 160;
+    const cardHeight = 220;
+    const spacing = 20;
+    const totalWidth = CHARACTERS.length * cardWidth + (CHARACTERS.length - 1) * spacing;
+    const startX = (width - totalWidth) / 2 + cardWidth / 2;
+
+    CHARACTERS.forEach((char, index) => {
+      const x = startX + index * (cardWidth + spacing);
+      const y = height / 2 - 20;
+      const card = this.createCharacterCard(x, y, cardWidth, cardHeight, char, index);
+      this.cards.push(card);
+    });
+
+    // Highlight first card by default
+    this.highlightCard(0);
+
+    // Instructions
+    this.add.text(width / 2, height - 100, 'Click a character to select', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    }).setOrigin(0.5);
+
+    // Confirm button
+    const confirmBtn = this.add.container(width / 2, height - 50);
+    const btnBg = this.add.rectangle(0, 0, 200, 50, 0x4caf50, 1).setStrokeStyle(2, 0x66bb6a);
+    this.confirmText = this.add.text(0, 0, 'Start Game', {
+      fontSize: '20px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    confirmBtn.add([btnBg, this.confirmText]);
+    confirmBtn.setSize(200, 50);
+    confirmBtn.setInteractive({ useHandCursor: true });
+    confirmBtn.on('pointerdown', () => this.confirmSelection());
+    confirmBtn.on('pointerover', () => btnBg.setFillStyle(0x66bb6a));
+    confirmBtn.on('pointerout', () => btnBg.setFillStyle(0x4caf50));
+
+    // Keyboard navigation
+    this.input.keyboard!.on('keydown-LEFT', () => this.selectPrevious());
+    this.input.keyboard!.on('keydown-RIGHT', () => this.selectNext());
+    this.input.keyboard!.on('keydown-ENTER', () => this.confirmSelection());
+    this.input.keyboard!.on('keydown-SPACE', () => this.confirmSelection());
+  }
+
+  private createCharacterCard(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    char: CharacterInfo,
+    index: number
+  ): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+
+    // Card background
+    const bg = this.add.rectangle(0, 0, w, h, 0x2d2d44, 1)
+      .setStrokeStyle(3, 0x3d3d5c);
+
+    // Character sprite (idle animation frame)
+    const sprite = this.add.sprite(0, -40, char.key, 0);
+    sprite.setScale(2);
+    sprite.play(`${char.key}_idle_down`);
+
+    // Character name
+    const nameText = this.add.text(0, 40, char.name, {
+      fontSize: '18px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Description (word wrap)
+    const descText = this.add.text(0, 75, char.description, {
+      fontSize: '11px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#aaaaaa',
+      wordWrap: { width: w - 20 },
+      align: 'center',
+    }).setOrigin(0.5, 0);
+
+    container.add([bg, sprite, nameText, descText]);
+    container.setSize(w, h);
+    container.setData('bg', bg);
+    container.setData('index', index);
+
+    // Make card interactive
+    container.setInteractive({ useHandCursor: true });
+    container.on('pointerdown', () => {
+      this.highlightCard(index);
+    });
+    container.on('pointerover', () => {
+      if (this.selectedIndex !== index) {
+        bg.setStrokeStyle(3, 0x5d5d7c);
+      }
+    });
+    container.on('pointerout', () => {
+      if (this.selectedIndex !== index) {
+        bg.setStrokeStyle(3, 0x3d3d5c);
+      }
+    });
+
+    return container;
+  }
+
+  private highlightCard(index: number) {
+    // Unhighlight previous
+    if (this.cards[this.selectedIndex]) {
+      const prevBg = this.cards[this.selectedIndex].getData('bg') as Phaser.GameObjects.Rectangle;
+      prevBg.setStrokeStyle(3, 0x3d3d5c);
+      prevBg.setFillStyle(0x2d2d44);
+    }
+
+    // Highlight new
+    this.selectedIndex = index;
+    const bg = this.cards[index].getData('bg') as Phaser.GameObjects.Rectangle;
+    bg.setStrokeStyle(3, 0x4caf50);
+    bg.setFillStyle(0x3d3d5c);
+  }
+
+  private selectPrevious() {
+    const newIndex = (this.selectedIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
+    this.highlightCard(newIndex);
+  }
+
+  private selectNext() {
+    const newIndex = (this.selectedIndex + 1) % CHARACTERS.length;
+    this.highlightCard(newIndex);
+  }
+
+  private confirmSelection() {
+    const selected = CHARACTERS[this.selectedIndex];
+    console.log('[CharacterSelect] Selected:', selected.key);
+
+    // Store in registry for Game scene
+    this.registry.set('selectedCharacter', selected.key);
+
+    // Transition to Game scene
+    this.scene.start('game');
   }
 }
 ```
+
+Export from scenes index if one exists, otherwise just ensure it's imported in PhaserGame.tsx.
   </action>
   <verify>`cd GameBuddiesHub/client && npx tsc --noEmit` passes</verify>
-  <done>Conversation circles drawn around grouped players, red for locked, green for open</done>
+  <done>CharacterSelect scene created with 4 character cards, keyboard/mouse navigation, and confirm button</done>
 </task>
 
 <task type="auto">
-  <name>Task 2: Create video grid component</name>
-  <files>GameBuddiesHub/client/src/components/game/VideoGrid.tsx</files>
+  <name>Task 2: Wire scene flow and update Game to use selection</name>
+  <files>GameBuddiesHub/client/src/components/game/PhaserGame.tsx, GameBuddiesHub/client/src/game/scenes/Game.ts</files>
   <action>
-Create video grid component that displays remote streams in a grid layout (SkyOffice style).
+1. **Register CharacterSelect scene in PhaserGame.tsx:**
 
+Import the new scene:
 ```typescript
-import React, { useEffect, useRef } from 'react';
-import { useWebRTC } from '../../contexts/WebRTCContext';
+import CharacterSelect from '../../game/scenes/CharacterSelect';
+```
 
-interface VideoGridProps {
-  maxVideos?: number;
+Add to scene array in Phaser config:
+```typescript
+scene: [Bootstrap, CharacterSelect, Game],
+```
+
+2. **Modify Bootstrap.ts to go to CharacterSelect instead of Game:**
+
+In Bootstrap.ts create() method, change:
+```typescript
+this.scene.start('game');
+```
+to:
+```typescript
+this.scene.start('characterSelect');
+```
+
+3. **Update Game.ts to use selected character:**
+
+In init() method, get the selected character:
+```typescript
+init() {
+  this.playerName = this.registry.get('playerName') || 'Player';
+  this.selectedCharacter = this.registry.get('selectedCharacter') || 'adam';
 }
-
-export const VideoGrid: React.FC<VideoGridProps> = ({ maxVideos = 6 }) => {
-  const { localStream, remoteStreams, isCameraEnabled } = useWebRTC();
-
-  return (
-    <div className="video-grid bg-gray-900/95 rounded-lg p-2 flex flex-col gap-2 max-h-[400px] overflow-auto">
-      {/* Local video */}
-      {localStream && (
-        <div className="relative">
-          <VideoTile
-            stream={localStream}
-            label="You"
-            muted={true}
-            mirrored={true}
-          />
-          {!isCameraEnabled && (
-            <div className="absolute inset-0 bg-gray-800 flex items-center justify-center text-gray-400 rounded">
-              Camera off
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Remote videos */}
-      {[...remoteStreams.entries()].slice(0, maxVideos).map(([peerId, stream]) => (
-        <VideoTile
-          key={peerId}
-          stream={stream}
-          label={peerId.slice(0, 8)}
-          muted={true}  // Audio routed through Web Audio API
-          mirrored={false}
-        />
-      ))}
-
-      {remoteStreams.size === 0 && localStream && (
-        <div className="text-gray-400 text-sm text-center py-2">
-          Walk near someone to start a conversation
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface VideoTileProps {
-  stream: MediaStream;
-  label: string;
-  muted: boolean;
-  mirrored?: boolean;
-}
-
-const VideoTile: React.FC<VideoTileProps> = ({ stream, label, muted, mirrored = false }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  return (
-    <div className="relative w-full aspect-video bg-gray-800 rounded overflow-hidden">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted={muted}
-        className={`w-full h-full object-cover ${mirrored ? 'scale-x-[-1]' : ''}`}
-      />
-      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded">
-        {label}
-      </div>
-    </div>
-  );
-};
 ```
 
-Export from components/game/index.ts.
-  </action>
-  <verify>`cd GameBuddiesHub/client && npx tsc --noEmit` passes</verify>
-  <done>VideoGrid component displays local + remote videos in grid layout</done>
-</task>
-
-<task type="auto">
-  <name>Task 3: Integrate VideoGrid and ChatInput into GamePage</name>
-  <files>GameBuddiesHub/client/src/pages/GamePage.tsx</files>
-  <action>
-Add VideoGrid and ChatInput to the GamePage sidebar.
-
-Import components:
+Add property to the class:
 ```typescript
-import { VideoGrid, ChatInput } from '../components/game';
+private selectedCharacter: string = 'adam';
 ```
 
-In the GamePage JSX, find the sidebar section and add:
+Update line ~188 where myPlayer is created:
 ```typescript
-{/* Video Grid */}
-<div className="mb-4">
-  <h3 className="text-white text-sm font-medium mb-2">Video Chat</h3>
-  <VideoGrid maxVideos={4} />
-</div>
-
-{/* Chat */}
-<div className="mt-auto">
-  <h3 className="text-white text-sm font-medium mb-2">Chat</h3>
-  <ChatInput />
-</div>
+this.myPlayer = this.add.myPlayer(spawnX, spawnY, this.selectedCharacter, sessionId);
 ```
 
-Make sure the sidebar has proper flex layout to accommodate both:
+Update line ~297 where otherPlayer is created - NOTE: other players should use THEIR selected character from state, not ours. For now, default to 'adam' until server tracks character selection. Add a TODO comment:
 ```typescript
-<div className="w-64 bg-gray-800 flex flex-col h-full p-4">
-  {/* Video at top */}
-  {/* Chat at bottom with mt-auto */}
-</div>
-```
-
-Ensure useConversationVideo hook is called to activate conversation-based video:
-```typescript
-import { useConversationVideo } from '../hooks';
-
-// In GamePage component
-useConversationVideo();
+// TODO: Get character from player state when server tracks selection
+const otherCharacter = 'adam';
+const otherPlayer = this.add.otherPlayer(
+  newPlayer.x || 705,
+  newPlayer.y || 500,
+  otherCharacter,
+  id,
+  newPlayer.name || 'Player'
+);
 ```
   </action>
   <verify>`cd GameBuddiesHub/client && npx tsc --noEmit` passes</verify>
-  <done>GamePage has VideoGrid and ChatInput in sidebar</done>
+  <done>Scene flow: Bootstrap → CharacterSelect → Game. Local player uses selected character.</done>
 </task>
 
 <task type="checkpoint:human-verify" gate="blocking">
-  <what-built>Full social features: proximity detection, conversation locking, video chat, audio isolation, text chat with speech bubbles, visual indicators, video grid</what-built>
+  <what-built>Avatar selection screen with 4 character cards, keyboard/mouse navigation, selection stored and used in game</what-built>
   <how-to-verify>
     1. Start server: `cd GameBuddieGamesServer && npm run dev`
     2. Start client: `cd GameBuddiesHub/client && npm run dev`
-    3. Open two browser tabs to http://localhost:5200/hub/
-    4. Create/join same room in both tabs
-    5. Test proximity:
-       - Walk avatars near each other (WASD)
-       - Should see green circle appear around both avatars
-       - Video feeds should connect automatically
-    6. Test conversation:
-       - While in conversation, should hear each other (if unmuted)
-       - Walk apart - video should disconnect after 750ms
-       - Circle should disappear
-    7. Test chat:
-       - Type message and send
-       - Should see speech bubble above avatar
-       - Should see message in chat panel
-    8. Test lock (if implemented):
-       - Third player approaches locked conversation
-       - Should see red circle
-       - Should see "Press E to join" prompt
+    3. Open browser to http://localhost:5200/hub/
+    4. Create/join a room (enter name, click Start)
+    5. **Character selection screen should appear:**
+       - 4 cards visible (Adam, Ash, Lucy, Nancy)
+       - Each card shows animated sprite, name, description
+       - Clicking a card highlights it (green border)
+       - Arrow keys cycle selection
+    6. Click "Start Game" button
+    7. **Verify avatar:**
+       - Your avatar matches selected character
+       - Walk around with WASD to confirm animations work
+    8. Test different character:
+       - Refresh, select different character
+       - Confirm it's the one you chose
   </how-to-verify>
-  <resume-signal>Type "approved" if all features work, or describe specific issues to fix</resume-signal>
+  <resume-signal>Type "approved" if avatar selection works, or describe specific issues to fix</resume-signal>
 </task>
 
 </tasks>
@@ -328,10 +336,11 @@ useConversationVideo();
 <verification>
 Before declaring plan complete:
 - [ ] `cd GameBuddiesHub/client && npx tsc --noEmit` passes
-- [ ] Conversation circles appear around players in conversations
-- [ ] Lock indicator (red) shown for locked conversations
-- [ ] Video grid displays local and remote video feeds
-- [ ] All social features work end-to-end (human verification)
+- [ ] CharacterSelect scene shows 4 character cards
+- [ ] Cards show animated sprites, names, descriptions
+- [ ] Click and keyboard selection works
+- [ ] Selected character is used in Game scene
+- [ ] Human verification approved
 </verification>
 
 <success_criteria>
@@ -339,13 +348,14 @@ Before declaring plan complete:
 - All tasks completed
 - All verification checks pass
 - Human verification approved
+- Players can choose from 4 preset avatars before entering world
 - Phase 2 social features complete
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/2-social-features/2-06-SUMMARY.md`:
 
-# Phase 2 Plan 06: Visual UI Summary
+# Phase 2 Plan 06: Avatar Selection Summary
 
 **[One-liner: What was built]**
 
