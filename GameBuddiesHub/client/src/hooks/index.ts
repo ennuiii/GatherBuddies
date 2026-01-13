@@ -36,6 +36,9 @@ export { useTypewriterSound } from './useTypewriterSound';
 // Proximity video hook
 export { useProximityVideo } from './useProximityVideo';
 
+// Conversation video hook
+export { useConversationVideo } from './useConversationVideo';
+
 // Desktop scaling hook
 export {
   useDesktopScale,
