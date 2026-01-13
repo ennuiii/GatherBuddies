@@ -21,7 +21,7 @@ Client (GameBuddiesTemplate pattern)     Server (GameBuddieGamesServer)
 
 - [x] **Phase 1: Foundation** - Standalone Colyseus server + Phaser client (COMPLETED - migrated)
 - [x] **Phase 1.5: Integration** - Migrate to GameBuddieGamesServer + GameBuddiesTemplate structure (COMPLETE)
-- [ ] **Phase 2: Social Features** - Proximity video chat, text chat, online players UI
+- [x] **Phase 2: Social Features** - Proximity video chat, text chat, avatar selection (COMPLETE)
 - [ ] **Phase 3: Game Integration** - Portal zones and game launching via URLs
 
 ## Phase Details
@@ -59,11 +59,11 @@ Key deliverables:
 - Phaser3 canvas in GamePage component
 - Multiplayer avatar movement via Colyseus
 
-### Phase 2: Social Features
+### Phase 2: Social Features (COMPLETE)
 **Goal**: Proximity-based communication enabling players to meet and chat naturally
 **Depends on**: Phase 1.5
 **Research**: Complete
-**Status**: In progress (5/6 plans complete)
+**Status**: Complete
 **Plans**: 6 plans
 
 Plans:
@@ -72,7 +72,7 @@ Plans:
 - [x] 2-03: Video Chat Integration
 - [x] 2-04: Audio Routing - Web Audio API gain-based isolation
 - [x] 2-05: Text Chat - Speech bubbles via Phaser, ChatInput component
-- [ ] 2-06: Avatar Selection
+- [x] 2-06: Avatar Selection - In-game character selection overlay
 
 Key deliverables:
 - Proximity detection (trigger when avatars near each other)
@@ -102,7 +102,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
 | 1.5. Integration | 3/3 | Complete | 2026-01-12 |
-| 2. Social Features | 5/6 | In progress | - |
+| 2. Social Features | 6/6 | Complete | 2026-01-13 |
 | 3. Game Integration | 0/TBD | Not started | - |
 
 ## Notes
