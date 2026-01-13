@@ -15,6 +15,7 @@ import {
   addEnhancedDiagnostics
 } from '../utils/webrtcMobileFixes';
 import { VirtualBackgroundService, DEFAULT_VIRTUAL_BACKGROUND_CONFIG } from '../services/virtualBackgroundService';
+import { conversationAudioRouter } from '../services/conversationAudioRouter';
 
 // ============================================================================
 // Types
@@ -262,6 +263,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
 
     console.log('[WebRTC] Confirming video chat...');
 
+    // Initialize audio router on user gesture
+    await conversationAudioRouter.initialize();
+
     // Read privacy settings from localStorage
     const joinMuted = localStorage.getItem('joinMuted') === 'true';
     const joinCameraOff = localStorage.getItem('joinCameraOff') === 'true';
@@ -341,6 +345,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       socket.emit('webrtc:disable-video', { roomCode });
       console.log('[WebRTC] Emitted webrtc:disable-video');
     }
+
+    // Clean up audio router
+    conversationAudioRouter.dispose();
 
     // Clean up virtual background service
     if (virtualBgServiceRef.current) {
@@ -580,6 +587,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       console.log(`[WebRTC] Received track from ${peerId}`);
       const [stream] = event.streams;
       setRemoteStreams(prev => new Map(prev).set(peerId, stream));
+
+      // Attach to audio router (conversation ID will be updated by conversation hook)
+      conversationAudioRouter.attachStream(peerId, stream, '');
     };
 
     // Handle connection state
@@ -592,6 +602,8 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
           next.delete(peerId);
           return next;
         });
+        // Remove from audio router
+        conversationAudioRouter.removeStream(peerId);
       }
     };
 
@@ -674,6 +686,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
         next.delete(peerId);
         return next;
       });
+
+      // Remove from audio router
+      conversationAudioRouter.removeStream(peerId);
     };
 
     // Handle offer from peer
@@ -765,6 +780,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
         next.delete(peerId);
         return next;
       });
+
+      // Remove from audio router
+      conversationAudioRouter.removeStream(peerId);
     };
 
     socket.on('webrtc:peer-enabled-video', handlePeerEnabledVideo);
