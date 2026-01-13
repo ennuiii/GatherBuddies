@@ -461,6 +461,71 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
   }, [localStream, selectedCameraId]);
 
   // ============================================================================
+  // Peer Connection Management
+  // ============================================================================
+
+  const createPeerConnection = useCallback((peerId: string): RTCPeerConnection => {
+    console.log(`[WebRTC] Creating peer connection for ${peerId}`);
+
+    const pc = new RTCPeerConnection({
+      iceServers: getICEServers(),
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    });
+
+    // Add local tracks
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        pc.addTrack(track, localStream);
+      });
+    }
+
+    // Apply mobile fixes
+    setH264CodecPreference(pc, peerId);
+    addEnhancedDiagnostics(pc, peerId);
+
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socket) {
+        socket.emit('webrtc:ice-candidate', {
+          roomCode,
+          toPeerId: peerId,
+          candidate: event.candidate.toJSON()
+        });
+      }
+    };
+
+    // Handle remote tracks
+    pc.ontrack = (event) => {
+      console.log(`[WebRTC] Received track from ${peerId}`);
+      const [stream] = event.streams;
+      setRemoteStreams(prev => new Map(prev).set(peerId, stream));
+
+      // Attach to audio router (conversation ID will be updated by conversation hook)
+      conversationAudioRouter.attachStream(peerId, stream, '');
+    };
+
+    // Handle connection state
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        console.log(`[WebRTC] Connection ${pc.connectionState} with ${peerId}`);
+        peerConnections.current.delete(peerId);
+        setRemoteStreams(prev => {
+          const next = new Map(prev);
+          next.delete(peerId);
+          return next;
+        });
+        // Remove from audio router
+        conversationAudioRouter.removeStream(peerId);
+      }
+    };
+
+    peerConnections.current.set(peerId, pc);
+    return pc;
+  }, [localStream, socket, roomCode]);
+
+  // ============================================================================
   // Conversation-Based Connection Management
   // ============================================================================
 
@@ -545,71 +610,6 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       return next;
     });
   }, []);
-
-  // ============================================================================
-  // Peer Connection Management
-  // ============================================================================
-
-  const createPeerConnection = useCallback((peerId: string): RTCPeerConnection => {
-    console.log(`[WebRTC] Creating peer connection for ${peerId}`);
-
-    const pc = new RTCPeerConnection({
-      iceServers: getICEServers(),
-      iceTransportPolicy: 'all',
-      bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require'
-    });
-
-    // Add local tracks
-    if (localStream) {
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
-      });
-    }
-
-    // Apply mobile fixes
-    setH264CodecPreference(pc, peerId);
-    addEnhancedDiagnostics(pc, peerId);
-
-    // Handle ICE candidates
-    pc.onicecandidate = (event) => {
-      if (event.candidate && socket) {
-        socket.emit('webrtc:ice-candidate', {
-          roomCode,
-          toPeerId: peerId,
-          candidate: event.candidate.toJSON()
-        });
-      }
-    };
-
-    // Handle remote tracks
-    pc.ontrack = (event) => {
-      console.log(`[WebRTC] Received track from ${peerId}`);
-      const [stream] = event.streams;
-      setRemoteStreams(prev => new Map(prev).set(peerId, stream));
-
-      // Attach to audio router (conversation ID will be updated by conversation hook)
-      conversationAudioRouter.attachStream(peerId, stream, '');
-    };
-
-    // Handle connection state
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        console.log(`[WebRTC] Connection ${pc.connectionState} with ${peerId}`);
-        peerConnections.current.delete(peerId);
-        setRemoteStreams(prev => {
-          const next = new Map(prev);
-          next.delete(peerId);
-          return next;
-        });
-        // Remove from audio router
-        conversationAudioRouter.removeStream(peerId);
-      }
-    };
-
-    peerConnections.current.set(peerId, pc);
-    return pc;
-  }, [localStream, socket, roomCode]);
 
   // ============================================================================
   // Signaling Handlers
