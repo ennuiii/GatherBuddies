@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-12)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** Phase 1.5 — Integration
+**Current focus:** Phase 2 — Social Features
 
 ## Current Position
 
-Phase: 1.5 of 3 (Integration)
-Plan: 3 of 3 (complete)
-Status: Phase complete
-Last activity: 2026-01-12 — Completed 1.5-03-PLAN.md
+Phase: 2 of 3 (Social Features)
+Plan: 1 of 6 in current phase
+Status: In progress
+Last activity: 2026-01-13 — Completed 2-01-PLAN.md
 
-Progress: █████░░░░░ 50% (Phases 1 and 1.5 complete)
+Progress: ██████░░░░ 55% (6 of 11 plans complete)
 
 ## Architecture Clarification (2026-01-12)
 
@@ -30,9 +30,9 @@ Key integration points:
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~13 min
-- Total execution time: ~63 min
+- Total plans completed: 6
+- Average duration: ~12 min
+- Total execution time: ~71 min
 
 **By Phase:**
 
@@ -40,10 +40,11 @@ Key integration points:
 |-------|-------|-------|----------|
 | 1 | 2 | ~22 min | ~11 min |
 | 1.5 | 3 | ~41 min | ~14 min |
+| 2 | 1 | ~8 min | ~8 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (~15 min), 1.5-01 (~15 min), 1.5-02 (~15 min), 1.5-03 (~11 min)
-- Trend: Consistent execution times
+- Last 5 plans: 1.5-01 (~15 min), 1.5-02 (~15 min), 1.5-03 (~11 min), 2-01 (~8 min)
+- Trend: Improving execution times
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Recent decisions affecting current work:
 - Added experimentalDecorators to tsconfig for @colyseus/schema
 - Hub client at port 5200 with /hub/ base path
 - Phase 1 Phaser files backed up to src-phaser-backup/
+- 750ms debounce for proximity connect/disconnect
+- Higher sessionId initiates connection (prevents duplicates)
+- phaserEvents for Phaser-to-React communication
 
 ### Deferred Issues
 
@@ -72,9 +76,9 @@ None - All infrastructure ready for Phaser integration.
 
 ## Session Continuity
 
-Last session: 2026-01-12
-Stopped at: Phase 1.5 complete
-Resume: Ready for Phase 2 (Social Features)
+Last session: 2026-01-13
+Stopped at: Completed 2-01-PLAN.md (Proximity Detection)
+Resume: Ready for 2-02-PLAN.md (Conversation State)
 
 ## What to Reuse from Phase 1
 

@@ -62,8 +62,17 @@ Key deliverables:
 ### Phase 2: Social Features
 **Goal**: Proximity-based communication enabling players to meet and chat naturally
 **Depends on**: Phase 1.5
-**Research**: Likely (proximity detection algorithms, PeerJS integration)
-**Plans**: TBD
+**Research**: Complete
+**Status**: In progress (1/6 plans complete)
+**Plans**: 6 plans
+
+Plans:
+- [x] 2-01: Proximity Detection - Physics overlap with debounced events
+- [ ] 2-02: Conversation State
+- [ ] 2-03: Video Chat Integration
+- [ ] 2-04: Text Chat
+- [ ] 2-05: Online Players UI
+- [ ] 2-06: Avatar Selection
 
 Key deliverables:
 - Proximity detection (trigger when avatars near each other)
@@ -93,7 +102,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
 | 1.5. Integration | 3/3 | Complete | 2026-01-12 |
-| 2. Social Features | 0/TBD | Not started | - |
+| 2. Social Features | 1/6 | In progress | - |
 | 3. Game Integration | 0/TBD | Not started | - |
 
 ## Notes
