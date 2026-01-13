@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-12)
 ## Current Position
 
 Phase: 2 of 3 (Social Features)
-Plan: 3 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-01-13 — Completed 2-03-PLAN.md
+Last activity: 2026-01-13 — Completed 2-04-PLAN.md
 
-Progress: ████████░░ 73% (8 of 11 plans complete)
+Progress: ████████░░ 82% (9 of 11 plans complete)
 
 ## Architecture Clarification (2026-01-12)
 
@@ -40,11 +40,11 @@ Key integration points:
 |-------|-------|-------|----------|
 | 1 | 2 | ~22 min | ~11 min |
 | 1.5 | 3 | ~41 min | ~14 min |
-| 2 | 3 | ~17 min | ~6 min |
+| 2 | 4 | ~22 min | ~6 min |
 
 **Recent Trend:**
-- Last 5 plans: 1.5-03 (~11 min), 2-01 (~8 min), 2-02 (~4 min), 2-03 (~5 min)
-- Trend: Improving execution times
+- Last 5 plans: 2-01 (~8 min), 2-02 (~4 min), 2-03 (~5 min), 2-04 (~5 min)
+- Trend: Consistent fast execution
 
 ## Accumulated Context
 
@@ -65,6 +65,7 @@ Recent decisions affecting current work:
 - 750ms debounce for proximity connect/disconnect
 - Higher sessionId initiates connection (prevents duplicates)
 - phaserEvents for Phaser-to-React communication
+- Web Audio API gain-based routing for conversation audio isolation
 
 ### Deferred Issues
 
@@ -77,8 +78,8 @@ None - All infrastructure ready for Phaser integration.
 ## Session Continuity
 
 Last session: 2026-01-13
-Stopped at: Completed 2-03-PLAN.md (Video Connections)
-Resume: Ready for 2-04-PLAN.md (Audio Routing)
+Stopped at: Completed 2-04-PLAN.md (Audio Routing)
+Resume: Ready for 2-05-PLAN.md (Online Players UI)
 
 ## What to Reuse from Phase 1
 
