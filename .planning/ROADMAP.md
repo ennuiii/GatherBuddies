@@ -63,12 +63,12 @@ Key deliverables:
 **Goal**: Proximity-based communication enabling players to meet and chat naturally
 **Depends on**: Phase 1.5
 **Research**: Complete
-**Status**: In progress (1/6 plans complete)
+**Status**: In progress (2/6 plans complete)
 **Plans**: 6 plans
 
 Plans:
 - [x] 2-01: Proximity Detection - Physics overlap with debounced events
-- [ ] 2-02: Conversation State
+- [x] 2-02: Conversation State - Server-authoritative conversation lifecycle
 - [ ] 2-03: Video Chat Integration
 - [ ] 2-04: Text Chat
 - [ ] 2-05: Online Players UI
@@ -102,7 +102,7 @@ Phases execute in order: 1 → 1.5 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
 | 1.5. Integration | 3/3 | Complete | 2026-01-12 |
-| 2. Social Features | 1/6 | In progress | - |
+| 2. Social Features | 2/6 | In progress | - |
 | 3. Game Integration | 0/TBD | Not started | - |
 
 ## Notes
