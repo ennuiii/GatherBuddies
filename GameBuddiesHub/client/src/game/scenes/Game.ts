@@ -306,9 +306,33 @@ export default class Game extends Phaser.Scene {
     }
   }
 
-  update(_t: number, _dt: number) {
+  update(_t: number, dt: number) {
     if (this.myPlayer && this.cursors) {
       this.myPlayer.update(this.cursors);
     }
+
+    // Clear current frame overlaps (will be repopulated by overlap callback)
+    this.currentFrameOverlaps.clear();
+
+    // Check for disconnections - players who were overlapping but aren't now
+    this.otherPlayerMap.forEach((player, id) => {
+      if (this.overlappingPlayers.has(id) && !this.currentFrameOverlaps.has(id)) {
+        // Player was overlapping but isn't now - start disconnect timer
+        player.updateDisconnectBuffer(dt);
+        if (player.shouldDisconnect()) {
+          player.disconnect();
+          this.overlappingPlayers.delete(id);
+          phaserEvents.emit('proximity:disconnect', { playerId: id });
+        }
+      } else if (!this.currentFrameOverlaps.has(id)) {
+        // Not overlapping - update proximity buffer for potential connection
+        player.updateProximityBuffer(dt);
+      }
+
+      // Reset disconnect buffer if overlapping
+      if (this.currentFrameOverlaps.has(id)) {
+        player.resetDisconnectBuffer();
+      }
+    });
   }
 }
