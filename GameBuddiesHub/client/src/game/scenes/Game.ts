@@ -84,6 +84,10 @@ export default class Game extends Phaser.Scene {
   private selectionCards: Phaser.GameObjects.Container[] = [];
   private pendingPlayerData: { player: PlayerState; sessionId: string } | null = null;
 
+  // Debug mode for positioning objects
+  private debugMode: boolean = false;
+  private debugText!: Phaser.GameObjects.Text;
+
   constructor() {
     super('game');
   }
@@ -110,6 +114,11 @@ export default class Game extends Phaser.Scene {
     };
     // Register E key for interactions (sit on chairs, etc.)
     this.keyE = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Register F9 key for debug mode (cabinet positioning)
+    const keyF9 = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F9);
+    keyF9.on('down', () => this.toggleDebugMode());
+
     this.input.keyboard!.disableGlobalCapture();
   }
 
@@ -641,9 +650,12 @@ export default class Game extends Phaser.Scene {
   /**
    * Create arcade cabinets programmatically at predefined positions.
    * Each cabinet represents a different game that can be launched.
+   *
+   * DEBUG: Press F9 to enable drag mode, then drag cabinets to position them.
+   * Console will log final positions when you drop them.
    */
   private createArcadeCabinets() {
-    // DDF arcade cabinet - upper right area, away from chairs
+    // DDF arcade cabinet
     const ddfCabinet = new ArcadeCabinet(
       this,
       750,
@@ -655,8 +667,9 @@ export default class Game extends Phaser.Scene {
     this.cabinetGroup.add(ddfCabinet);
     ddfCabinet.setDepth(300);
     this.add.existing(ddfCabinet);
+    this.setupCabinetDrag(ddfCabinet, 'DDF');
 
-    // School Quiz arcade cabinet - further right, same row
+    // School Quiz arcade cabinet
     const schoolQuizCabinet = new ArcadeCabinet(
       this,
       900,
@@ -668,8 +681,65 @@ export default class Game extends Phaser.Scene {
     this.cabinetGroup.add(schoolQuizCabinet);
     schoolQuizCabinet.setDepth(300);
     this.add.existing(schoolQuizCabinet);
+    this.setupCabinetDrag(schoolQuizCabinet, 'School Quiz');
 
-    console.log('[Game] Created 2 arcade cabinets at (750,300) and (900,300)');
+    // Debug text (hidden by default)
+    this.debugText = this.add.text(10, 10, '', {
+      fontSize: '16px',
+      color: '#00ff00',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 }
+    }).setScrollFactor(0).setDepth(10000).setVisible(false);
+
+    console.log('[Game] Created 2 arcade cabinets. Press F9 to enable drag mode for positioning.');
+  }
+
+  /**
+   * Setup drag behavior for a cabinet (only active in debug mode)
+   */
+  private setupCabinetDrag(cabinet: ArcadeCabinet, name: string) {
+    cabinet.setInteractive({ draggable: true, useHandCursor: true });
+
+    this.input.on('drag', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number, dragY: number) => {
+      if (!this.debugMode) return;
+      if (gameObject === cabinet) {
+        cabinet.setPosition(dragX, dragY);
+        cabinet.setDepth(dragY);
+        // Update debug text with current position
+        this.debugText.setText(`Dragging ${name}: (${Math.round(dragX)}, ${Math.round(dragY)})`);
+      }
+    });
+
+    this.input.on('dragend', (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      if (!this.debugMode) return;
+      if (gameObject === cabinet) {
+        const x = Math.round(cabinet.x);
+        const y = Math.round(cabinet.y);
+        console.log(`%c[CABINET POSITION] ${name}: (${x}, ${y})`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
+        this.debugText.setText(`${name} placed at (${x}, ${y}) - check console for copy-paste values`);
+      }
+    });
+  }
+
+  /**
+   * Toggle debug mode for cabinet positioning
+   * Press F9 to enable/disable
+   */
+  private toggleDebugMode() {
+    this.debugMode = !this.debugMode;
+    this.debugText.setVisible(this.debugMode);
+
+    if (this.debugMode) {
+      this.debugText.setText('DEBUG MODE: Drag cabinets to position them. Press F9 to exit.');
+      console.log('%c[DEBUG MODE ON] Drag arcade cabinets to reposition. Positions will be logged to console.', 'color: #ffff00; font-weight: bold;');
+    } else {
+      console.log('%c[DEBUG MODE OFF] Cabinet positions logged above. Update Game.ts with new coordinates.', 'color: #ffff00; font-weight: bold;');
+      // Log all cabinet positions
+      this.cabinetGroup.getChildren().forEach((child) => {
+        const cab = child as ArcadeCabinet;
+        console.log(`%c  ${cab.gameName}: (${Math.round(cab.x)}, ${Math.round(cab.y)})`, 'color: #00ff00;');
+      });
+    }
   }
 
   private handleChairOverlap(
