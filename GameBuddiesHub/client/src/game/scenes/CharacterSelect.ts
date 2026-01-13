@@ -6,6 +6,7 @@
  */
 
 import Phaser from 'phaser';
+import { createCharacterAnims } from '../anims/CharacterAnims';
 
 interface CharacterInfo {
   key: string;
@@ -30,6 +31,9 @@ export default class CharacterSelect extends Phaser.Scene {
   }
 
   create() {
+    // Create character animations (needed for preview sprites)
+    createCharacterAnims(this.anims);
+
     const { width, height } = this.scale;
 
     // Dark overlay background
