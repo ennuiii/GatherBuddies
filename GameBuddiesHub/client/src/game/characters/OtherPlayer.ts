@@ -7,11 +7,18 @@
 
 import Phaser from 'phaser';
 import Player from './Player';
+import { phaserEvents } from '../events/EventCenter';
 
 export default class OtherPlayer extends Player {
   private targetPosition: [number, number];
   private lastUpdateTimestamp?: number;
   private playContainerBody: Phaser.Physics.Arcade.Body;
+
+  // Proximity state
+  connected: boolean = false;
+  private connectionBufferTime: number = 0;
+  readyToConnect: boolean = false;
+  private disconnectBufferTime: number = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -64,6 +71,52 @@ export default class OtherPlayer extends Player {
   destroy(fromScene?: boolean) {
     this.playerContainer.destroy();
     super.destroy(fromScene);
+  }
+
+  // Proximity detection methods
+  updateProximityBuffer(dt: number) {
+    this.connectionBufferTime += dt;
+    if (this.connectionBufferTime >= 750) {
+      this.readyToConnect = true;
+    }
+  }
+
+  resetProximityBuffer() {
+    this.connected = false;
+    this.connectionBufferTime = 0;
+    this.readyToConnect = false;
+  }
+
+  updateDisconnectBuffer(dt: number) {
+    this.disconnectBufferTime += dt;
+  }
+
+  resetDisconnectBuffer() {
+    this.disconnectBufferTime = 0;
+  }
+
+  shouldDisconnect(): boolean {
+    return this.connected && this.disconnectBufferTime >= 750;
+  }
+
+  disconnect() {
+    this.connected = false;
+    this.readyToConnect = false;
+    this.connectionBufferTime = 0;
+    this.disconnectBufferTime = 0;
+  }
+
+  checkProximityConnection(mySessionId: string): boolean {
+    if (
+      !this.connected &&
+      this.readyToConnect &&
+      mySessionId > this.playerId
+    ) {
+      this.connected = true;
+      phaserEvents.emit('proximity:connect', { playerId: this.playerId });
+      return true;
+    }
+    return this.connected;
   }
 
   preUpdate(t: number, dt: number) {
