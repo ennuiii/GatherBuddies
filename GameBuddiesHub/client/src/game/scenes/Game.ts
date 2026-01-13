@@ -20,6 +20,7 @@ import MyPlayer from '../characters/MyPlayer';
 import OtherPlayer from '../characters/OtherPlayer';
 import '../characters/MyPlayer';
 import '../characters/OtherPlayer';
+import { phaserEvents } from '../events/EventCenter';
 
 interface NavKeys {
   up: Phaser.Input.Keyboard.Key;
@@ -48,6 +49,8 @@ export default class Game extends Phaser.Scene {
   private otherPlayers!: Phaser.Physics.Arcade.Group;
   private otherPlayerMap = new Map<string, OtherPlayer>();
   private playerName: string = 'Player';
+  private overlappingPlayers: Set<string> = new Set();
+  private currentFrameOverlaps: Set<string> = new Set();
 
   constructor() {
     super('game');
@@ -116,21 +119,48 @@ export default class Game extends Phaser.Scene {
     // Set up camera
     this.cameras.main.zoom = 1.5;
 
-    // Set up Colyseus state listeners
-    this.setupColyseusListeners();
+    // Register handler for room data messages (avoids console warning)
+    this.room.onMessage(3, (data: { id: string; roomCode: string }) => {
+      console.log('[Game] Received room data:', data);
+    });
 
-    console.log('[Game] Scene created, waiting for players from Colyseus');
+    // Set up Colyseus state listeners immediately
+    // onAdd callback should fire for existing items when first registered
+    console.log('[Game] Scene created, setting up listeners...');
+    this.setupColyseusListeners();
   }
 
   private setupColyseusListeners() {
     const state = this.room.state as any;
 
-    // Listen for player additions
-    state.players.onAdd((player: PlayerState, sessionId: string) => {
-      console.log('[Game] Player added:', sessionId, player.name);
+    console.log('[Game] Setting up Colyseus listeners, session:', this.room.sessionId);
+    console.log('[Game] State object:', state);
+    console.log('[Game] State.players:', state.players);
+    console.log('[Game] Players type:', typeof state.players, state.players?.constructor?.name);
+    console.log('[Game] Players size:', state.players?.size);
+
+    // Debug: try to iterate players
+    if (state.players) {
+      console.log('[Game] Iterating players...');
+      let count = 0;
+      state.players.forEach((p: any, id: string) => {
+        console.log('[Game] Found player in state:', id, p);
+        count++;
+      });
+      console.log('[Game] Total players found:', count);
+    }
+
+    // Handler for adding a player
+    const handlePlayerAdd = (player: PlayerState, sessionId: string) => {
+      console.log('[Game] Processing player:', sessionId, player.name, 'isLocal:', sessionId === this.room.sessionId);
 
       if (sessionId === this.room.sessionId) {
-        // This is the local player
+        // This is the local player - only create once
+        if (this.myPlayer) {
+          console.log('[Game] MyPlayer already exists, skipping');
+          return;
+        }
+
         const spawnX = player.x || 705;
         const spawnY = player.y || 500;
 
@@ -153,6 +183,17 @@ export default class Game extends Phaser.Scene {
         if (groundLayer) {
           this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], groundLayer);
         }
+
+        // Add proximity detection overlap
+        this.physics.add.overlap(
+          this.myPlayer,
+          this.otherPlayers,
+          this.handlePlayersOverlap,
+          undefined,
+          this
+        );
+
+        console.log('[Game] MyPlayer created at', spawnX, spawnY);
       } else {
         // This is another player
         this.handlePlayerJoined(player, sessionId);
@@ -164,7 +205,14 @@ export default class Game extends Phaser.Scene {
           this.handlePlayerUpdated(sessionId, player);
         }
       });
-    });
+    };
+
+    // Listen for player additions - the 'true' parameter is CRUCIAL
+    // It makes onAdd fire immediately for existing items in the collection
+    state.players.onAdd((player: PlayerState, sessionId: string) => {
+      console.log('[Game] onAdd triggered for:', sessionId);
+      handlePlayerAdd(player, sessionId);
+    }, true); // <-- This triggers for existing players immediately!
 
     // Listen for player removals
     state.players.onRemove((_player: PlayerState, sessionId: string) => {
@@ -240,6 +288,22 @@ export default class Game extends Phaser.Scene {
     });
 
     return group;
+  }
+
+  private handlePlayersOverlap(
+    _myPlayer: Phaser.Types.Physics.Arcade.GameObjectWithBody,
+    otherPlayer: Phaser.Types.Physics.Arcade.GameObjectWithBody
+  ) {
+    const other = otherPlayer as OtherPlayer;
+    this.currentFrameOverlaps.add(other.playerId);
+
+    if (!this.overlappingPlayers.has(other.playerId)) {
+      // First time overlapping - update buffer
+      other.updateProximityBuffer(0); // Start counting
+      if (other.checkProximityConnection(this.room.sessionId)) {
+        this.overlappingPlayers.add(other.playerId);
+      }
+    }
   }
 
   update(_t: number, _dt: number) {
