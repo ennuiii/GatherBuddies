@@ -228,22 +228,16 @@ export default class Game extends Phaser.Scene {
 
     // Listen for new chat messages
     state.chatMessages.onAdd((message: any, _index: number) => {
-      console.log('[Game] New chat message:', message.author, message.content);
+      console.log('[Game] New chat message:', message.author, message.authorId, message.content);
 
       // Find the player who sent this message and show speech bubble
       let senderPlayer: import('../characters/Player').default | undefined;
 
-      // Check if it's from local player
-      const myPlayerState = state.players.get(this.room.sessionId);
-      if (myPlayerState && myPlayerState.name === message.author) {
+      // Match by sessionId (authorId) for correct bubble placement
+      if (message.authorId === this.room.sessionId) {
         senderPlayer = this.myPlayer;
-      } else {
-        // Find in other players
-        state.players.forEach((player: any, sessionId: string) => {
-          if (player.name === message.author && this.otherPlayerMap.has(sessionId)) {
-            senderPlayer = this.otherPlayerMap.get(sessionId);
-          }
-        });
+      } else if (this.otherPlayerMap.has(message.authorId)) {
+        senderPlayer = this.otherPlayerMap.get(message.authorId);
       }
 
       if (senderPlayer) {
@@ -340,6 +334,10 @@ export default class Game extends Phaser.Scene {
       other.updateProximityBuffer(0); // Start counting
       if (other.checkProximityConnection(this.room.sessionId)) {
         this.overlappingPlayers.add(other.playerId);
+
+        // Send START_CONVERSATION to Colyseus server (Message.START_CONVERSATION = 4)
+        this.room.send(4, { targetSessionId: other.playerId });
+        console.log('[Game] Sent START_CONVERSATION for', other.playerId);
       }
     }
   }
@@ -420,6 +418,10 @@ export default class Game extends Phaser.Scene {
           player.disconnect();
           this.overlappingPlayers.delete(id);
           phaserEvents.emit('proximity:disconnect', { playerId: id });
+
+          // Send LEAVE_CONVERSATION to Colyseus server (Message.LEAVE_CONVERSATION = 5)
+          this.room.send(5, {});
+          console.log('[Game] Sent LEAVE_CONVERSATION');
         }
       } else if (!this.currentFrameOverlaps.has(id)) {
         // Not overlapping - update proximity buffer for potential connection

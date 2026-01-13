@@ -3,6 +3,7 @@
  *
  * Connects/disconnects video based on conversation membership.
  * Listens to Colyseus state for conversation changes.
+ * Auto-enables video when entering a conversation.
  */
 
 import { useEffect, useRef } from 'react';
@@ -13,12 +14,17 @@ import { conversationAudioRouter } from '../services/conversationAudioRouter';
 /**
  * Hook that connects/disconnects video based on conversation membership.
  * Listens to Colyseus state for conversation changes.
+ * Auto-enables video when entering a conversation.
  */
 export function useConversationVideo() {
   const {
     connectToConversationPeers,
     disconnectFromConversationPeers,
-    localStream
+    localStream,
+    isVideoChatActive,
+    prepareVideoChat,
+    confirmVideoChat,
+    disableVideoChat
   } = useWebRTC();
 
   const currentConversationRef = useRef<string>('');
@@ -41,6 +47,7 @@ export function useConversationVideo() {
       if (newConversationId !== currentConversationRef.current) {
         // Conversation changed
         const oldPeers = new Set(currentPeersRef.current);
+        const wasInConversation = currentConversationRef.current !== '';
 
         // Update audio router with my new conversation ID
         conversationAudioRouter.setMyConversation(newConversationId);
@@ -49,6 +56,12 @@ export function useConversationVideo() {
           // Left conversation - disconnect from all peers
           disconnectFromConversationPeers([...oldPeers]);
           currentPeersRef.current.clear();
+
+          // Disable video when leaving conversation
+          if (wasInConversation) {
+            console.log('[ConversationVideo] Left conversation, disabling video');
+            disableVideoChat();
+          }
 
           // Update all remote audio to muted (not in any conversation)
           state.players?.forEach((player: any, sessionId: string) => {
@@ -68,13 +81,26 @@ export function useConversationVideo() {
             }
           });
 
+          // Auto-enable video when entering conversation (if not already active)
+          if (!wasInConversation && !isVideoChatActive) {
+            console.log('[ConversationVideo] Entered conversation, auto-enabling video');
+            prepareVideoChat().then(() => {
+              // Small delay to ensure stream is ready, then auto-confirm
+              setTimeout(() => {
+                confirmVideoChat();
+              }, 100);
+            }).catch(err => {
+              console.warn('[ConversationVideo] Failed to auto-enable video:', err);
+            });
+          }
+
           // Disconnect from peers no longer in conversation
           const toDisconnect = [...oldPeers].filter(id => !newPeers.has(id));
           if (toDisconnect.length > 0) {
             disconnectFromConversationPeers(toDisconnect);
           }
 
-          // Connect to new peers
+          // Connect to new peers (will happen after video is ready)
           const toConnect = [...newPeers].filter(id => !oldPeers.has(id));
           if (toConnect.length > 0 && localStream) {
             connectToConversationPeers(toConnect);
@@ -119,5 +145,5 @@ export function useConversationVideo() {
     return () => {
       // Cleanup handled by WebRTCContext
     };
-  }, [connectToConversationPeers, disconnectFromConversationPeers, localStream]);
+  }, [connectToConversationPeers, disconnectFromConversationPeers, localStream, isVideoChatActive, prepareVideoChat, confirmVideoChat, disableVideoChat]);
 }
