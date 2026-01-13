@@ -10,6 +10,7 @@ import Phaser from 'phaser';
 import { Bootstrap, Game } from '../../game/scenes';
 import { colyseusService } from '../../services/colyseusService';
 import GameLaunchDialog from './GameLaunchDialog';
+import GameInviteNotification from './GameInviteNotification';
 
 interface PhaserGameProps {
   roomCode: string;
@@ -132,7 +133,8 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
           </div>
         </div>
       )}
-      <GameLaunchDialog />
+      <GameLaunchDialog playerName={playerName} />
+      <GameInviteNotification playerName={playerName} />
     </div>
   );
 }

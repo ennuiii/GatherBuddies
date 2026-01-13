@@ -51,6 +51,7 @@ export interface WebRTCContextState {
   confirmVideoChat: () => void;
   cancelVideoPreparation: () => void;
   disableVideoChat: () => void;
+  autoEnableVideoChat: () => Promise<void>; // Direct enable without modal
 
   // Connection state
   isConnecting: boolean;
@@ -336,6 +337,60 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
 
     console.log('[WebRTC] Video chat enabled (muted:', joinMuted, ', camera off:', joinCameraOff, ', virtualBg:', virtualBgEnabled && supportsVirtualBg, ')');
   }, [localStream, isVideoPrepairing, socket, roomCode]);
+
+  // Auto-enable video without showing the configuration modal
+  // Used for automatic proximity-based connections
+  const autoEnableVideoChat = useCallback(async () => {
+    if (isVideoChatActive) {
+      console.log('[WebRTC] Auto-enable: already active, skipping');
+      return;
+    }
+
+    console.log('[WebRTC] Auto-enabling video chat (no modal)...');
+    setConnectionError(null);
+
+    try {
+      // Get media stream
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: getVideoConstraints(selectedCameraId || undefined),
+        audio: getAudioConstraints(selectedMicrophoneId || undefined)
+      });
+
+      setLocalStream(stream);
+      localStreamRef.current = stream;
+
+      // Initialize audio router
+      await conversationAudioRouter.initialize();
+
+      // Read privacy settings from localStorage
+      const joinMuted = localStorage.getItem('joinMuted') === 'true';
+      const joinCameraOff = localStorage.getItem('joinCameraOff') === 'true';
+
+      // Apply privacy settings to tracks
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = !joinMuted;
+      });
+      stream.getVideoTracks().forEach(track => {
+        track.enabled = !joinCameraOff;
+      });
+
+      // Update state - directly active, no preparing phase
+      setIsAudioEnabled(!joinMuted);
+      setIsCameraEnabled(!joinCameraOff);
+      setIsVideoChatActive(true);
+      // Note: NOT setting isVideoPrepairing - this skips the modal
+
+      // Notify server
+      if (socket && roomCode) {
+        socket.emit('webrtc:enable-video', { roomCode, connectionType: 'camera' });
+      }
+
+      console.log('[WebRTC] Auto-enabled video chat (muted:', joinMuted, ', camera off:', joinCameraOff, ')');
+    } catch (error) {
+      console.error('[WebRTC] Auto-enable failed:', error);
+      setConnectionError('Failed to access camera/microphone');
+    }
+  }, [isVideoChatActive, selectedCameraId, selectedMicrophoneId, socket, roomCode]);
 
   const disableVideoChat = useCallback(() => {
     console.log('[WebRTC] Disabling video chat...');
@@ -885,6 +940,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
     confirmVideoChat,
     cancelVideoPreparation,
     disableVideoChat,
+    autoEnableVideoChat,
     isConnecting,
     connectionError,
     selectedCameraId,
@@ -911,6 +967,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
     confirmVideoChat,
     cancelVideoPreparation,
     disableVideoChat,
+    autoEnableVideoChat,
     isConnecting,
     connectionError,
     selectedCameraId,

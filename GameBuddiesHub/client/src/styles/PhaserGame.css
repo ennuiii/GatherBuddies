@@ -19,6 +19,17 @@
   height: 100% !important;
 }
 
+/* Overlay for loading/error states */
+.phaser-game-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #1a1a2e;
+  z-index: 10;
+}
+
 /* Loading state */
 .phaser-game-loading {
   display: flex;
@@ -107,4 +118,33 @@
     min-height: 300px;
     border-radius: 8px;
   }
+}
+
+/* Game invite notification animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
 }

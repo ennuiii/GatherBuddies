@@ -1,37 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import { phaserEvents } from '../../game/events/EventCenter';
-
-interface NearbyPlayer {
-  sessionId: string;
-  name: string;
-}
+import { colyseusService } from '../../services/colyseusService';
 
 interface CabinetInteractEvent {
   gameType: string;
   gameName: string;
-  nearbyPlayers: NearbyPlayer[];
+  nearbyPlayers: string[];
+  hubRoomCode: string;
 }
 
-// Game routing config (matches gamebuddies.io AVAILABLE_GAMES)
-const GAME_PATHS: Record<string, string> = {
-  ddf: '/ddf',
-  schoolquiz: '/schooled',
-};
+interface GameLaunchDialogProps {
+  playerName: string;
+}
 
-export default function GameLaunchDialog() {
+export default function GameLaunchDialog({ playerName }: GameLaunchDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [gameData, setGameData] = useState<CabinetInteractEvent | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Get player name from localStorage (set during lobby join)
-  const playerName = localStorage.getItem('playerName') || 'Player';
 
   useEffect(() => {
     const handleInteract = (data: CabinetInteractEvent) => {
+      console.log('[GameLaunchDialog] cabinet:interact received - opening dialog (NOT sending invite yet)');
+      console.log('[GameLaunchDialog] Game:', data.gameName, 'Nearby players:', data.nearbyPlayers.length);
       setGameData(data);
       setIsOpen(true);
-      setError(null);
       phaserEvents.emit('dialog:opened');
     };
 
@@ -44,61 +35,48 @@ export default function GameLaunchDialog() {
   const handleClose = useCallback(() => {
     setIsOpen(false);
     setGameData(null);
-    setError(null);
-    setIsLoading(false);
     phaserEvents.emit('dialog:closed');
   }, []);
 
-  const handleLaunch = useCallback(async () => {
+  const handleLaunch = useCallback(() => {
     if (!gameData) return;
 
-    setIsLoading(true);
-    setError(null);
+    console.log('[GameLaunchDialog] *** PLAY BUTTON CLICKED - Now sending invites ***');
 
-    try {
-      // 1. Create room on gamebuddies.io
-      const createRes = await fetch('https://gamebuddies.io/api/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creatorName: playerName }),
-      });
+    // Get current session ID to filter out self from invites
+    const room = colyseusService.getRoom();
+    const mySessionId = room?.sessionId;
 
-      if (!createRes.ok) {
-        throw new Error('Failed to create room');
-      }
+    // Filter nearby players to exclude self (first element is always self)
+    const playersToInvite = gameData.nearbyPlayers.filter(id => id !== mySessionId);
 
-      const room = await createRes.json();
+    console.log('[GameLaunchDialog] nearbyPlayers:', gameData.nearbyPlayers);
+    console.log('[GameLaunchDialog] mySessionId:', mySessionId);
+    console.log('[GameLaunchDialog] playersToInvite:', playersToInvite);
 
-      // 2. Select game for the room
-      const selectRes = await fetch(
-        `https://gamebuddies.io/api/rooms/${room.roomCode}/select-game`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gameType: gameData.gameType }),
-        }
+    // Send invite to nearby players via Colyseus
+    if (playersToInvite.length > 0) {
+      console.log('[GameLaunchDialog] Sending GAME_INVITE to', playersToInvite.length, 'players:', playersToInvite);
+      colyseusService.sendGameInvite(
+        gameData.gameType,
+        gameData.gameName,
+        gameData.hubRoomCode,
+        playersToInvite,
+        playerName
       );
-
-      if (!selectRes.ok) {
-        throw new Error('Failed to select game');
-      }
-
-      // 3. TODO: Notify nearby players (future: through Colyseus)
-      // For now, just log that we would invite them
-      if (gameData.nearbyPlayers.length > 0) {
-        console.log('[GameLaunchDialog] Would invite:', gameData.nearbyPlayers);
-      }
-
-      // 4. Navigate to game
-      phaserEvents.emit('dialog:closed');
-      const gamePath = GAME_PATHS[gameData.gameType] || '/';
-      window.location.href = `https://gamebuddies.io${gamePath}?room=${room.roomCode}&name=${encodeURIComponent(playerName)}`;
-
-    } catch (err) {
-      console.error('[GameLaunchDialog] Error:', err);
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-      setIsLoading(false);
+    } else {
+      console.log('[GameLaunchDialog] No nearby players to invite');
     }
+
+    // Open game in new tab with Hub room code and role=gm (initiator creates the room)
+    const gameUrl = `https://gamebuddies.io/${gameData.gameType}?room=${gameData.hubRoomCode}&name=${encodeURIComponent(playerName)}&role=gm`;
+    console.log('[GameLaunchDialog] Opening game URL:', gameUrl);
+
+    phaserEvents.emit('dialog:closed');
+    window.open(gameUrl, '_blank');
+
+    setIsOpen(false);
+    setGameData(null);
   }, [gameData, playerName]);
 
   if (!isOpen || !gameData) return null;
@@ -108,35 +86,25 @@ export default function GameLaunchDialog() {
       <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 text-white">
         <h2 className="text-xl font-bold mb-4">Launch Game</h2>
 
-        <div className="mb-4">
-          <p className="text-lg">{gameData.gameName}</p>
-          {gameData.nearbyPlayers.length > 0 && (
-            <p className="text-sm text-gray-400 mt-2">
-              {gameData.nearbyPlayers.length} nearby player(s) will be invited to join
-            </p>
-          )}
+        <div className="mb-6">
+          <p className="text-lg font-medium">{gameData.gameName}</p>
+          <p className="text-sm text-gray-400 mt-2">
+            You'll be taken to the game lobby to create or join a room.
+          </p>
         </div>
-
-        {error && (
-          <div className="bg-red-500/20 text-red-400 p-3 rounded mb-4">
-            {error}
-          </div>
-        )}
 
         <div className="flex gap-3">
           <button
             onClick={handleClose}
-            disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleLaunch}
-            disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 rounded disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 rounded transition-colors"
           >
-            {isLoading ? 'Launching...' : 'Play'}
+            Play
           </button>
         </div>
       </div>

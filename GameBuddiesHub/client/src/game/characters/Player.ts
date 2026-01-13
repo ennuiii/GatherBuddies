@@ -7,6 +7,14 @@
 
 import Phaser from 'phaser';
 
+// Position adjustments for sitting in each direction: [xShift, yShift, depthShift]
+export const sittingShiftData: Record<string, [number, number, number]> = {
+  up: [0, 3, -10],
+  down: [0, 3, 1],
+  left: [0, -8, 10],
+  right: [0, -8, 10],
+};
+
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   playerId: string;
   playerTexture: string;

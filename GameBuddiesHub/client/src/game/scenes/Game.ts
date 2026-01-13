@@ -657,23 +657,25 @@ export default class Game extends Phaser.Scene {
   /**
    * Create arcade cabinets programmatically at predefined positions.
    * Each cabinet represents a different game that can be launched.
+   * gameType = the URL path on gamebuddies.io (e.g., 'schooled' → /schooled)
    *
    * DEBUG: Press F9 to enable drag mode, then drag cabinets to position them.
    * Console will log final positions when you drop them.
    */
   private createArcadeCabinets() {
     // All available games with their positions
+    // gameType matches the URL path on gamebuddies.io
     // Use F9 debug mode to reposition, then update coordinates here
     const games = [
       // Row 1
-      { gameType: 'schoolquiz', gameName: 'Schooled!', x: 454, y: 547 },
-      { gameType: 'ddf', gameName: 'DDF', x: 572, y: 547 },
+      { gameType: 'schooled', gameName: 'Schooled!', x: 454, y: 547 },
+      { gameType: 'primesuspect', gameName: 'Prime Suspect', x: 572, y: 547 },
       { gameType: 'bingo', gameName: 'Bingo Buddies', x: 690, y: 547 },
-      { gameType: 'canvaschaos', gameName: 'Canvas Chaos', x: 808, y: 547 },
+      { gameType: 'canvas-chaos', gameName: 'Canvas Chaos', x: 808, y: 547 },
       // Row 2
       { gameType: 'cluescale', gameName: 'ClueScale', x: 454, y: 647 },
-      { gameType: 'lastbrain', gameName: 'Last Brain Standing', x: 572, y: 647 },
-      { gameType: 'primesuspect', gameName: 'Prime Suspect', x: 690, y: 647 },
+      { gameType: 'thinkalike', gameName: 'Think Alike', x: 572, y: 647 },
+      { gameType: 'lastbrain', gameName: 'Last Brain', x: 690, y: 647 },
       { gameType: 'badactor', gameName: 'Bad Actor', x: 808, y: 647 },
     ];
 
@@ -878,8 +880,6 @@ export default class Game extends Phaser.Scene {
       // Clamp radius to reasonable bounds
       const radius = Math.min(Math.max(maxDist + 40, 50), 200);
 
-      console.log('[Game] Drawing circle:', { convId, centerX, centerY, radius, players: conv.players.length });
-
       // Draw circle (red for locked, green for open)
       this.conversationGraphics.lineStyle(3, conv.locked ? 0xff6b6b : 0x4caf50, 0.6);
       this.conversationGraphics.strokeCircle(centerX, centerY, radius);
@@ -901,18 +901,29 @@ export default class Game extends Phaser.Scene {
       const selectedItem = this.playerSelector.selectedItem;
       if (selectedItem instanceof ArcadeCabinet) {
         // Get nearby players for the game launch
+        // Use currentFrameOverlaps for immediate nearby detection (not the 750ms conversation threshold)
         const nearbyPlayers: string[] = [this.room.sessionId];
-        this.overlappingPlayers.forEach((playerId) => {
+        this.currentFrameOverlaps.forEach((playerId) => {
           nearbyPlayers.push(playerId);
         });
+        // Also include already connected conversation partners
+        this.overlappingPlayers.forEach((playerId) => {
+          if (!nearbyPlayers.includes(playerId)) {
+            nearbyPlayers.push(playerId);
+          }
+        });
+
+        // Get Hub room code to use as game room code
+        const hubRoomCode = this.registry.get('roomCode') as string;
 
         // Emit cabinet interaction event
         phaserEvents.emit('cabinet:interact', {
           gameType: selectedItem.gameType,
           gameName: selectedItem.gameName,
-          nearbyPlayers: nearbyPlayers
+          nearbyPlayers: nearbyPlayers,
+          hubRoomCode: hubRoomCode
         });
-        console.log('[Game] Cabinet interaction:', selectedItem.gameType, 'nearbyPlayers:', nearbyPlayers);
+        console.log('[Game] Cabinet interaction:', selectedItem.gameType, 'nearbyPlayers:', nearbyPlayers, 'hubRoomCode:', hubRoomCode);
       }
     }
 

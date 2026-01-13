@@ -41,6 +41,35 @@ export class HubRoom extends Room<HubState> {
       })
     })
 
+    // Handle game invites - broadcast to nearby players
+    this.onMessage(
+      Message.GAME_INVITE,
+      (client, message: {
+        gameType: string
+        gameName: string
+        hubRoomCode: string
+        targetPlayers: string[]
+        inviterName: string
+      }) => {
+        const { gameType, gameName, hubRoomCode, targetPlayers, inviterName } = message
+
+        // Send invite to each target player
+        targetPlayers.forEach((targetSessionId) => {
+          const targetClient = this.clients.find((c) => c.sessionId === targetSessionId)
+          if (targetClient) {
+            targetClient.send(Message.GAME_INVITE, {
+              gameType,
+              gameName,
+              hubRoomCode,
+              inviterName,
+              inviterSessionId: client.sessionId,
+            })
+            console.log(`Game invite sent to ${targetSessionId} for ${gameName}`)
+          }
+        })
+      }
+    )
+
     console.log(`HubRoom "${name}" created`)
   }
 

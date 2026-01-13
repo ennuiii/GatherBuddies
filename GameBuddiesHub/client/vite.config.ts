@@ -1,20 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
+// https://vite.dev/config/
+export default defineConfig(({ mode }) => ({
+  // Hub base path for GameBuddies reverse proxy
+  // Production: https://gamebuddies.io/hub/
+  // Use './' for Capacitor builds (CAPACITOR=true npm run build)
+  base: process.env.CAPACITOR ? './' : '/hub/',
+  plugins: [
+    react(),
+    // Copy MediaPipe WASM files for virtual background feature
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/@mediapipe/tasks-vision/wasm/*',
+          dest: 'wasm'
+        }
+      ]
+    })
+  ],
   server: {
-    port: 5173,
-    proxy: {
-      '/colyseus': {
-        target: 'http://localhost:2567',
-        ws: true,
-        changeOrigin: true,
-      },
-    },
+    // Hub client dev port
+    port: 5200,
+    host: true,
   },
-  define: {
-    'process.env': {},
+  // Only strip debugger statements in production builds (keep console for debugging)
+  esbuild: mode === 'production'
+    ? { drop: ['debugger'] }
+    : {},
+  build: {
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 600,
   },
-})
+}))

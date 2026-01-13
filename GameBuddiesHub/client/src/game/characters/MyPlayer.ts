@@ -6,7 +6,9 @@
  */
 
 import Phaser from 'phaser';
-import Player from './Player';
+import Player, { sittingShiftData } from './Player';
+import { Chair } from '../items';
+import type { PlayerSelector } from '../items';
 
 interface NavKeys {
   up: Phaser.Input.Keyboard.Key;
@@ -25,8 +27,15 @@ export interface MovementData {
   anim: string;
 }
 
+export enum PlayerBehavior {
+  IDLE,
+  SITTING,
+}
+
 export default class MyPlayer extends Player {
   private playContainerBody: Phaser.Physics.Arcade.Body;
+  playerBehavior: PlayerBehavior = PlayerBehavior.IDLE;
+  private chairOnSit?: Chair;
 
   // Callback for sending movement updates (connected in Game scene)
   onMovementUpdate?: (data: MovementData) => void;
@@ -47,8 +56,86 @@ export default class MyPlayer extends Player {
     this.playerName.setText(name);
   }
 
-  update(cursors: NavKeys) {
+  update(
+    cursors: NavKeys,
+    keyE?: Phaser.Input.Keyboard.Key,
+    playerSelector?: PlayerSelector
+  ) {
     if (!cursors) return;
+
+    const selectedItem = playerSelector?.selectedItem;
+
+    switch (this.playerBehavior) {
+      case PlayerBehavior.SITTING:
+        // Press E to stand up
+        if (keyE && Phaser.Input.Keyboard.JustDown(keyE)) {
+          const currentAnim = this.anims.currentAnim?.key;
+          if (currentAnim) {
+            const parts = currentAnim.split('_');
+            parts[1] = 'idle';
+            this.play(parts.join('_'), true);
+          }
+          this.playerBehavior = PlayerBehavior.IDLE;
+          this.chairOnSit?.clearDialogBox();
+          this.chairOnSit = undefined;
+
+          if (playerSelector) {
+            playerSelector.setPosition(this.x, this.y);
+          }
+
+          this.onMovementUpdate?.({
+            x: this.x,
+            y: this.y,
+            anim: this.anims.currentAnim?.key || '',
+          });
+        }
+        return; // Don't process movement while sitting
+
+      case PlayerBehavior.IDLE:
+      default:
+        // Check for E key to sit on chair (only handle Chair items here)
+        if (keyE && selectedItem instanceof Chair && Phaser.Input.Keyboard.JustDown(keyE)) {
+          const chair = selectedItem;
+          if (chair.itemDirection) {
+            // Stop movement
+            this.setVelocity(0, 0);
+            this.playContainerBody.setVelocity(0, 0);
+
+            // Move player to chair position with offset
+            const shift = sittingShiftData[chair.itemDirection];
+            if (shift) {
+              this.setPosition(chair.x + shift[0], chair.y + shift[1]);
+              this.setDepth(chair.depth + shift[2]);
+
+              this.playerContainer.setPosition(
+                chair.x + shift[0],
+                chair.y + shift[1] - 30
+              );
+            }
+
+            // Play sitting animation
+            this.play(`${this.playerTexture}_sit_${chair.itemDirection}`, true);
+
+            // Update state
+            chair.clearDialogBox();
+            chair.setDialogBox('Press E to leave');
+            this.chairOnSit = chair;
+            this.playerBehavior = PlayerBehavior.SITTING;
+
+            if (playerSelector) {
+              playerSelector.selectedItem = undefined;
+            }
+
+            this.onMovementUpdate?.({
+              x: this.x,
+              y: this.y,
+              anim: this.anims.currentAnim?.key || '',
+            });
+            return;
+          }
+        }
+        break;
+    }
 
     const speed = 200;
     let vx = 0;
@@ -111,6 +198,11 @@ export default class MyPlayer extends Player {
           });
         }
       }
+    }
+
+    // Update player selector position
+    if (playerSelector) {
+      playerSelector.update(this.x, this.y, cursors, this.playerBehavior === PlayerBehavior.SITTING);
     }
   }
 }
