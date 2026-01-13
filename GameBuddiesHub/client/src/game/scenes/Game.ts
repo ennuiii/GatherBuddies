@@ -655,33 +655,35 @@ export default class Game extends Phaser.Scene {
    * Console will log final positions when you drop them.
    */
   private createArcadeCabinets() {
-    // DDF arcade cabinet
-    const ddfCabinet = new ArcadeCabinet(
-      this,
-      750,
-      300,
-      'arcade_cabinet',
-      0,
-      { gameType: 'ddf', gameName: 'DDF' }
-    );
-    this.cabinetGroup.add(ddfCabinet);
-    ddfCabinet.setDepth(300);
-    this.add.existing(ddfCabinet);
-    this.setupCabinetDrag(ddfCabinet, 'DDF');
+    // All available games with their positions
+    // Use F9 debug mode to reposition, then update coordinates here
+    const games = [
+      // Row 1
+      { gameType: 'schoolquiz', gameName: 'Schooled!', x: 454, y: 547 },
+      { gameType: 'ddf', gameName: 'DDF', x: 572, y: 547 },
+      { gameType: 'bingo', gameName: 'Bingo Buddies', x: 690, y: 547 },
+      { gameType: 'canvaschaos', gameName: 'Canvas Chaos', x: 808, y: 547 },
+      // Row 2
+      { gameType: 'cluescale', gameName: 'ClueScale', x: 454, y: 647 },
+      { gameType: 'lastbrain', gameName: 'Last Brain Standing', x: 572, y: 647 },
+      { gameType: 'primesuspect', gameName: 'Prime Suspect', x: 690, y: 647 },
+      { gameType: 'badactor', gameName: 'Bad Actor', x: 808, y: 647 },
+    ];
 
-    // School Quiz arcade cabinet
-    const schoolQuizCabinet = new ArcadeCabinet(
-      this,
-      900,
-      300,
-      'arcade_cabinet',
-      0,
-      { gameType: 'schoolquiz', gameName: 'School Quiz' }
-    );
-    this.cabinetGroup.add(schoolQuizCabinet);
-    schoolQuizCabinet.setDepth(300);
-    this.add.existing(schoolQuizCabinet);
-    this.setupCabinetDrag(schoolQuizCabinet, 'School Quiz');
+    games.forEach((game) => {
+      const cabinet = new ArcadeCabinet(
+        this,
+        game.x,
+        game.y,
+        'arcade_cabinet',
+        0,
+        { gameType: game.gameType, gameName: game.gameName }
+      );
+      this.cabinetGroup.add(cabinet);
+      cabinet.setDepth(game.y);
+      this.add.existing(cabinet);
+      this.setupCabinetDrag(cabinet, game.gameName);
+    });
 
     // Debug text (hidden by default)
     this.debugText = this.add.text(10, 10, '', {
@@ -691,7 +693,7 @@ export default class Game extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     }).setScrollFactor(0).setDepth(10000).setVisible(false);
 
-    console.log('[Game] Created 2 arcade cabinets. Press F9 to enable drag mode for positioning.');
+    console.log(`[Game] Created ${games.length} arcade cabinets. Press F9 to enable drag mode for positioning.`);
   }
 
   /**
