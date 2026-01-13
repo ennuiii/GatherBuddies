@@ -42,6 +42,12 @@ export default class Bootstrap extends Phaser.Scene {
       frameHeight: 72,
     });
 
+    // Load arcade cabinet sprite (using computer.png as placeholder)
+    this.load.spritesheet('arcade_cabinet', 'assets/items/computer.png', {
+      frameWidth: 96,
+      frameHeight: 64,
+    });
+
     // Load tileset sprites
     this.load.spritesheet('office', 'assets/items/Modern_Office_Black_Shadow.png', {
       frameWidth: 32,
