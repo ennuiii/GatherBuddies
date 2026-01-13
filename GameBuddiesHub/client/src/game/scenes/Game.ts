@@ -88,6 +88,9 @@ export default class Game extends Phaser.Scene {
   private debugMode: boolean = false;
   private debugText!: Phaser.GameObjects.Text;
 
+  // Dialog state - pause game input while dialog is open
+  private dialogOpen: boolean = false;
+
   constructor() {
     super('game');
   }
@@ -191,6 +194,10 @@ export default class Game extends Phaser.Scene {
     // onAdd callback should fire for existing items when first registered
     console.log('[Game] Scene created, setting up listeners...');
     this.setupColyseusListeners();
+
+    // Listen for dialog state changes to pause/resume game input
+    phaserEvents.on('dialog:opened', () => { this.dialogOpen = true; });
+    phaserEvents.on('dialog:closed', () => { this.dialogOpen = false; });
   }
 
   private setupColyseusListeners() {
@@ -884,12 +891,13 @@ export default class Game extends Phaser.Scene {
   }
 
   update(t: number, dt: number) {
-    if (this.myPlayer && this.cursors) {
+    // Skip player input while dialog is open
+    if (this.myPlayer && this.cursors && !this.dialogOpen) {
       this.myPlayer.update(this.cursors, this.keyE, this.playerSelector);
     }
 
-    // Handle E key interaction with arcade cabinets
-    if (this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE)) {
+    // Handle E key interaction with arcade cabinets (skip if dialog open)
+    if (this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE) && !this.dialogOpen) {
       const selectedItem = this.playerSelector.selectedItem;
       if (selectedItem instanceof ArcadeCabinet) {
         // Get nearby players for the game launch
