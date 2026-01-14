@@ -197,9 +197,14 @@ class AvatarCompositorService {
    * Extended LPC has 46 rows (adds idle at 22-25, sit at 30-33, run at 34-37).
    *
    * For sprites with only 21 rows, we map extended rows back to walk rows.
+   *
+   * @param row - The requested animation row
+   * @param maxRows - The number of rows in this sprite
+   * @param forceFallback - If true, always use fallback even if sprite has the row
    */
-  private getFallbackRow(row: number, maxRows: number): number {
-    if (row < maxRows) return row;
+  private getFallbackRow(row: number, maxRows: number, forceFallback: boolean = false): number {
+    // If forceFallback is true, always compute fallback (used for sit animation to keep all layers aligned)
+    if (!forceFallback && row < maxRows) return row;
 
     // Map extended animation rows to walk animation rows
     // Idle rows 22-25 -> Walk rows 8-11
@@ -211,6 +216,13 @@ class AvatarCompositorService {
 
     // For any other row beyond sprite's height, use walk down (row 10)
     return Math.min(row % maxRows, 10);
+  }
+
+  /**
+   * Check if a row is a sit animation row (30-33)
+   */
+  private isSitRow(row: number): boolean {
+    return row >= 30 && row <= 33;
   }
 
   /**
@@ -242,8 +254,18 @@ class AvatarCompositorService {
 
       // Check if this sprite has the requested row, if not use fallback
       const spriteRows = Math.floor(source.height / LPC_FRAME_HEIGHT);
-      const actualRow = this.getFallbackRow(row, spriteRows);
+
+      // For sit animation rows (30-33), force ALL layers to use fallback
+      // This ensures body and clothing use the same walk-pose frames
+      // (clothing doesn't have sit rows, so body using sit + clothing using walk = misalignment)
+      const forceFallback = this.isSitRow(row);
+      const actualRow = this.getFallbackRow(row, spriteRows, forceFallback);
       const srcY = actualRow * LPC_FRAME_HEIGHT;
+
+      // Debug: Log when using fallback for sit/idle/run animations
+      if (row !== actualRow) {
+        console.log(`[AvatarCompositor] Layer ${layerName}: row ${row} -> fallback ${actualRow} (sprite has ${spriteRows} rows, forceFallback=${forceFallback})`);
+      }
 
       if (layer.tint) {
         // Create temp canvas for this frame

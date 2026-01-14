@@ -157,6 +157,9 @@ export default class MyPlayer extends Player {
             }
 
             // Play sitting animation
+            // Note: The compositor forces all layers to use walk-pose frames for sit animation
+            // since clothing sprites don't have sitting rows. The "sit" animation will show
+            // the character in walk pose but positioned on the chair.
             this.play(`${this.playerTexture}_sit_${chair.itemDirection}`, true);
 
             // Update state
