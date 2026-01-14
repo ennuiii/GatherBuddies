@@ -181,12 +181,12 @@ export interface ShoesOption {
 
 // NOTE: Only includes shoes with extended animations (46 rows: walk, idle, sit, run)
 // Items with only 21 rows (shoes, boots, sandals, slippers, sneakers, dress_shoes) are excluded
-// shoes2/boots2 only have male folder in LPC - female/teen body types don't have these assets
+// shoes2/boots2 have male folder and thin/ subfolder for female/teen (handled by AvatarAssetLoader)
 // 'none' is a special option for barefoot (no shoe layer rendered)
 export const SHOES: ShoesOption[] = [
   { id: 'none' as Shoes, displayName: 'Barefoot', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
-  { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'muscular', 'child'] },
-  { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'muscular', 'child'] },
+  { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
 ];
 
 // ============================================================================
