@@ -5,36 +5,45 @@
 See: .planning/PROJECT.md (updated 2026-01-14)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** v1.0 MVP complete - Ready for next milestone
+**Current focus:** v1.1 Avatar Customization — Phase 4 (LPC Asset Integration)
 
 ## Current Position
 
-Milestone: v1.0 MVP - SHIPPED 2026-01-14
-Phase: All phases complete (1, 1.5, 2, 3)
-Status: Ready for next milestone planning
+Phase: 4 of 6 (LPC Asset Integration)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-14 — Milestone v1.1 created
 
-Progress: v1.0 complete (4 phases, 13 plans)
+Progress: ░░░░░░░░░░ 0% (0 of 3 phases complete)
 
-## v1.0 Summary
+## v1.1 Scope
 
-**Shipped 2026-01-14**
+**Milestone Goal:** Replace preset avatars with full LPC-based customization system
 
-Virtual 2D lobby world where players walk as avatars, connect via proximity video chat, and launch games through arcade cabinet portals.
+**Phases:**
+- Phase 4: LPC Asset Integration - Load and composite avatar layers
+- Phase 5: Avatar Editor UI - Phaser-based customization scene
+- Phase 6: First-Join & Persistence - Force customization, save/load, sync
 
-**Metrics:**
-- 4 phases, 13 plans
-- ~9 days (2026-01-05 to 2026-01-14)
-- ~99,400 lines TypeScript
+**Constraints:**
+- Use LPC assets already in public/assets/avatars/
+- Keep editor in Phaser (not React modal)
+- Support all existing animations (walk, idle for 4 directions)
 
-## Key Decisions (v1.0)
+## Key Decisions (v1.1)
 
-All decisions logged in PROJECT.md Key Decisions table with outcomes marked.
+None yet.
 
 ## Session Continuity
 
 Last session: 2026-01-14
-Milestone v1.0 completed and archived.
-Next: Plan v1.1 or v2.0 milestone
+Stopped at: Milestone v1.1 initialization
+Resume: Ready to plan Phase 4
+
+## Roadmap Evolution
+
+- v1.0 MVP shipped: 2026-01-14 (Phases 1-3, 13 plans)
+- v1.1 Avatar Customization created: 2026-01-14 (Phases 4-6)
 
 ## Architecture
 
