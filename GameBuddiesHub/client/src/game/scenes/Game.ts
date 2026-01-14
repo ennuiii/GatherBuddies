@@ -104,6 +104,10 @@ export default class Game extends Phaser.Scene {
   // Dialog state - pause game input while dialog is open
   private dialogOpen: boolean = false;
 
+  // Avatar editor state
+  private avatarEditorOpen: boolean = false;
+  private keyC!: Phaser.Input.Keyboard.Key;
+
   constructor() {
     super('game');
   }
@@ -137,6 +141,9 @@ export default class Game extends Phaser.Scene {
     };
     // Register E key for interactions (sit on chairs, etc.)
     this.keyE = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Register C key for avatar customization
+    this.keyC = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.C);
 
     // Register F9 key for debug mode (cabinet positioning)
     const keyF9 = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F9);
@@ -225,6 +232,12 @@ export default class Game extends Phaser.Scene {
 
     // Listen for other player character changes (for live avatar updates)
     phaserEvents.on('otherPlayer:characterChanged', this.handleOtherPlayerCharacterChanged, this);
+
+    // Listen for avatar editor scene stop to reset state
+    this.scene.get('avatarEditor')?.events.on('shutdown', () => {
+      this.avatarEditorOpen = false;
+      console.log('[Game] Avatar editor scene shutdown');
+    });
   }
 
   /**
@@ -294,6 +307,85 @@ export default class Game extends Phaser.Scene {
       }
     }
   };
+
+  /**
+   * Open the Phaser-native avatar editor scene.
+   * Launches editor as overlay, passes current config, handles save callback.
+   */
+  openAvatarEditor() {
+    // Don't open if already open or no player spawned
+    if (this.avatarEditorOpen || !this.myPlayer) {
+      console.log('[Game] Cannot open avatar editor - already open or player not spawned');
+      return;
+    }
+
+    console.log('[Game] Opening avatar editor');
+    this.avatarEditorOpen = true;
+
+    // Get current config or use default
+    const currentConfig = this.avatarConfig || {
+      id: `avatar_${Date.now()}`,
+      body: { type: 'neutral' as const, skinTone: 'fair' as const },
+      hair: { style: 'short' as const, color: '#4A3728' },
+      clothing: {
+        top: 'tshirt' as const,
+        topColor: '#3B82F6',
+        bottom: 'jeans' as const,
+        bottomColor: '#1E3A5F',
+        shoes: 'sneakers' as const,
+        shoesColor: '#FFFFFF',
+      },
+      accessories: [],
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Launch editor scene as overlay (game scene stays active but input is blocked)
+    this.scene.launch('avatarEditor', {
+      config: currentConfig,
+      onSave: this.handleAvatarEditorSave.bind(this),
+    });
+  }
+
+  /**
+   * Handle save from avatar editor scene.
+   * Updates local config, player sprite, and syncs to server.
+   */
+  private async handleAvatarEditorSave(config: AvatarConfig) {
+    console.log('[Game] Avatar editor saved:', config);
+    this.avatarEditorOpen = false;
+
+    // Store config locally
+    this.avatarConfig = config;
+    avatarStorage.save(config);
+
+    // Update player sprite
+    if (this.myPlayer) {
+      try {
+        // Compose new avatar texture
+        const textureKey = await avatarCompositor.composeAvatar(config);
+        avatarCompositor.createAnimations(textureKey);
+
+        // Swap texture on player sprite
+        this.myPlayer.updateTexture(textureKey);
+        console.log('[Game] MyPlayer texture updated to:', textureKey);
+
+        // Send updated config to server for other players
+        this.room.send(6, { character: JSON.stringify(config) }); // HubMessage.UPDATE_CHARACTER = 6
+      } catch (error) {
+        console.error('[Game] Failed to update avatar after save:', error);
+      }
+    }
+  }
+
+  /**
+   * Handle avatar editor close (cancel or escape).
+   */
+  handleAvatarEditorClose() {
+    console.log('[Game] Avatar editor closed');
+    this.avatarEditorOpen = false;
+  }
 
   private setupColyseusListeners() {
     const state = this.room.state as any;
@@ -1153,13 +1245,18 @@ export default class Game extends Phaser.Scene {
   }
 
   update(t: number, dt: number) {
-    // Skip player input while dialog is open
-    if (this.myPlayer && this.cursors && !this.dialogOpen) {
+    // Skip player input while dialog or avatar editor is open
+    if (this.myPlayer && this.cursors && !this.dialogOpen && !this.avatarEditorOpen) {
       this.myPlayer.update(this.cursors, this.keyE, this.playerSelector);
     }
 
-    // Handle E key interaction with arcade cabinets (skip if dialog open)
-    if (this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE) && !this.dialogOpen) {
+    // Handle C key to open avatar editor (skip if dialog or editor open)
+    if (this.keyC && Phaser.Input.Keyboard.JustDown(this.keyC) && !this.dialogOpen && !this.avatarEditorOpen) {
+      this.openAvatarEditor();
+    }
+
+    // Handle E key interaction with arcade cabinets (skip if dialog or editor open)
+    if (this.keyE && Phaser.Input.Keyboard.JustDown(this.keyE) && !this.dialogOpen && !this.avatarEditorOpen) {
       const selectedItem = this.playerSelector.selectedItem;
       if (selectedItem instanceof ArcadeCabinet) {
         // Get nearby players for the game launch
