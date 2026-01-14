@@ -23,6 +23,9 @@ export const LPC_FRAME_HEIGHT = 64;
 export const LPC_COLS = 13; // Columns in LPC Universal sheet
 export const LPC_ROWS = 46; // Rows in LPC Extended sheet (includes idle, run, sit, jump)
 
+// Asset loading timeout (ms)
+const ASSET_LOAD_TIMEOUT = 10000; // 10 seconds per asset
+
 // Default color for assets
 const DEFAULT_COLOR = 'white';
 const DEFAULT_HAIR_COLOR = 'black';
@@ -101,6 +104,14 @@ const ADULT_ONLY_HAIR_STYLES = new Set([
   'shoulderl', 'shoulderr', 'twists_fade', 'twists_straight',
 ]);
 
+/**
+ * Multi-word LPC color names (contain underscores).
+ * Used for proper parsing of asset keys like 'hair_pixie_dark_brown'.
+ */
+const MULTI_WORD_LPC_COLORS = new Set([
+  'dark_brown', 'light_brown', 'dark_gray',
+]);
+
 class AvatarAssetLoaderService {
   private scene: Phaser.Scene | null = null;
   private loadedAssets: Set<string> = new Set();
@@ -176,15 +187,23 @@ class AvatarAssetLoaderService {
       const assetPath = this.getAssetPath(key, bodyType);
       console.log(`[AvatarAssetLoader] Loading: ${textureKey} from ${assetPath}`);
 
-      this.scene!.load.spritesheet(textureKey, assetPath, {
-        frameWidth: LPC_FRAME_WIDTH,
-        frameHeight: LPC_FRAME_HEIGHT,
-      });
+      // Timeout handler
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let isResolved = false;
+
+      const cleanup = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        this.scene?.load.off('filecomplete', onComplete);
+        this.scene?.load.off('loaderror', onError);
+      };
 
       const onComplete = (loadedKey: string) => {
-        if (loadedKey === textureKey) {
-          this.scene!.load.off('filecomplete', onComplete);
-          this.scene!.load.off('loaderror', onError);
+        if (loadedKey === textureKey && !isResolved) {
+          isResolved = true;
+          cleanup();
           this.loadedAssets.add(cacheKey);
           this.loadingPromises.delete(cacheKey);
           console.log(`[AvatarAssetLoader] Loaded: ${textureKey}`);
@@ -193,15 +212,34 @@ class AvatarAssetLoaderService {
       };
 
       const onError = (file: Phaser.Loader.File) => {
-        if (file.key === textureKey) {
-          this.scene!.load.off('filecomplete', onComplete);
-          this.scene!.load.off('loaderror', onError);
+        if (file.key === textureKey && !isResolved) {
+          isResolved = true;
+          cleanup();
           this.loadingPromises.delete(cacheKey);
           this.failedAssets.add(cacheKey); // Mark as failed to avoid retrying
           console.error(`[AvatarAssetLoader] Failed to load: ${textureKey} from ${assetPath}`);
           reject(new Error(`Failed to load asset: ${textureKey}`));
         }
       };
+
+      const onTimeout = () => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          this.loadingPromises.delete(cacheKey);
+          this.failedAssets.add(cacheKey); // Mark as failed to avoid retrying
+          console.error(`[AvatarAssetLoader] Timeout loading: ${textureKey}`);
+          reject(new Error(`Timeout loading asset: ${textureKey}`));
+        }
+      };
+
+      // Set up timeout
+      timeoutId = setTimeout(onTimeout, ASSET_LOAD_TIMEOUT);
+
+      this.scene!.load.spritesheet(textureKey, assetPath, {
+        frameWidth: LPC_FRAME_WIDTH,
+        frameHeight: LPC_FRAME_HEIGHT,
+      });
 
       this.scene!.load.on('filecomplete', onComplete);
       this.scene!.load.on('loaderror', onError);
@@ -219,16 +257,24 @@ class AvatarAssetLoaderService {
    */
   getTextureKey(key: string, bodyType: BodyType): string {
     const parts = key.split('_');
-    const category = parts[0];
+    
+    // Handle two-part category prefixes (wings_bg, wings_fg)
+    let category = parts[0];
+    if (parts[0] === 'wings' && (parts[1] === 'bg' || parts[1] === 'fg')) {
+      category = `${parts[0]}_${parts[1]}`;
+    }
 
     // These categories have body-type-specific paths, so need unique keys
-    const bodyTypeSpecificCategories = ['body', 'face', 'hair', 'top', 'bottom', 'shoes'];
+    const bodyTypeSpecificCategories = [
+      'body', 'face', 'head', 'hair', 'top', 'bottom', 'shoes',
+      'ears', 'horns', 'tail', 'wings_bg', 'wings_fg', 'hat'
+    ];
 
     if (bodyTypeSpecificCategories.includes(category)) {
       return `${key}_${bodyType}`;
     }
 
-    // Other assets (eyes, accessories) don't vary by body type
+    // Other assets (eyes, glasses, hats, accessories) don't vary by body type
     return key;
   }
 
@@ -270,8 +316,22 @@ class AvatarAssetLoaderService {
     // Body base
     keys.push(`body_${skinTone}`);
 
-    // Face (head)
-    keys.push(`face_${skinTone}`);
+    // Head (creature/species head or human face)
+    if (config.head?.type && config.head.type !== 'human') {
+      keys.push(`head_${config.head.type}`);
+    } else {
+      keys.push(`face_${skinTone}`);
+    }
+
+    // Ears (decorative ears)
+    if (config.ears?.type && config.ears.type !== 'none') {
+      keys.push(`ears_${config.ears.type}`);
+    }
+
+    // Horns
+    if (config.horns?.type && config.horns.type !== 'none') {
+      keys.push(`horns_${config.horns.type}`);
+    }
 
     // Eyes
     if (config.eyes?.color) {
@@ -289,6 +349,17 @@ class AvatarAssetLoaderService {
       keys.push(`beard_${config.beard.style}_${DEFAULT_HAIR_COLOR}`);
     }
 
+    // Tail
+    if (config.tail?.type && config.tail.type !== 'none') {
+      keys.push(`tail_${config.tail.type}`);
+    }
+
+    // Wings - need both bg and fg layers
+    if (config.wings?.type && config.wings.type !== 'none') {
+      keys.push(`wings_bg_${config.wings.type}`);
+      keys.push(`wings_fg_${config.wings.type}`);
+    }
+
     // Clothing (skip 'none' options)
     if (config.clothing.top && config.clothing.top !== 'none') {
       keys.push(`top_${config.clothing.top}_${DEFAULT_COLOR}`);
@@ -300,7 +371,17 @@ class AvatarAssetLoaderService {
       keys.push(`shoes_${config.clothing.shoes}_${DEFAULT_COLOR}`);
     }
 
-    // Accessories
+    // Hat/helmet
+    if (config.hat?.type && config.hat.type !== 'none') {
+      keys.push(`hat_${config.hat.type}_${DEFAULT_COLOR}`);
+    }
+
+    // Glasses
+    if (config.glasses?.type && config.glasses.type !== 'none') {
+      keys.push(`glasses_${config.glasses.type}`);
+    }
+
+    // Legacy accessories
     for (const acc of config.accessories) {
       keys.push(`accessory_${acc.type}`);
     }
@@ -325,7 +406,12 @@ class AvatarAssetLoaderService {
   private getAssetPath(key: string, bodyType: BodyType): string {
     const baseUrl = getBaseUrl();
     const parts = key.split('_');
-    const category = parts[0];
+    
+    // Handle two-part category prefixes (wings_bg, wings_fg)
+    let category = parts[0];
+    if (parts[0] === 'wings' && (parts[1] === 'bg' || parts[1] === 'fg')) {
+      category = `${parts[0]}_${parts[1]}`;
+    }
 
     switch (category) {
       case 'body': {
@@ -341,13 +427,50 @@ class AvatarAssetLoaderService {
         return `${baseUrl}assets/avatars/lpc/head/heads/human/${faceType}/${skinTone}.png`;
       }
 
+      case 'head': {
+        // head_goblin -> head/heads/{species}/{bodyType}/default.png
+        const species = parts[1];
+        return this.getHeadPath(baseUrl, species, bodyType);
+      }
+
+      case 'ears': {
+        // ears_elven_ears -> head/ears/elven/{bodyType}/default.png
+        const earType = parts.slice(1).join('_');
+        return this.getEarsPath(baseUrl, earType, bodyType);
+      }
+
+      case 'horns': {
+        // horns_backwards -> head/horns/backwards/{bodyType}/default.png
+        const hornType = parts.slice(1).join('_');
+        return this.getHornsPath(baseUrl, hornType, bodyType);
+      }
+
       case 'hair': {
         // hair_pixie_black -> hair/pixie/{gender}/black.png
         // hair_flat_top_fade_black -> hair/flat_top_fade/{gender}/black.png
+        // hair_pixie_dark_brown -> hair/pixie/{gender}/dark_brown.png (multi-word color!)
         // hair_bob_black -> hair/bob/adult/black.png (some styles use 'adult' folder)
-        // Style can have underscores, color is always the last segment (single word)
-        const color = parts[parts.length - 1] || DEFAULT_HAIR_COLOR;
-        const style = parts.slice(1, -1).join('_'); // Everything between 'hair_' and '_color'
+        // Style can have underscores, color can be single or multi-word (e.g., dark_brown)
+
+        // Check if last two parts form a multi-word color (e.g., 'dark_brown')
+        let color: string;
+        let style: string;
+
+        if (parts.length >= 3) {
+          const potentialMultiWordColor = `${parts[parts.length - 2]}_${parts[parts.length - 1]}`;
+          if (MULTI_WORD_LPC_COLORS.has(potentialMultiWordColor)) {
+            // Multi-word color like 'dark_brown' - take last two parts
+            color = potentialMultiWordColor;
+            style = parts.slice(1, -2).join('_'); // Everything between 'hair_' and '_dark_brown'
+          } else {
+            // Single-word color - take only last part
+            color = parts[parts.length - 1] || DEFAULT_HAIR_COLOR;
+            style = parts.slice(1, -1).join('_'); // Everything between 'hair_' and '_color'
+          }
+        } else {
+          color = parts[parts.length - 1] || DEFAULT_HAIR_COLOR;
+          style = parts.slice(1, -1).join('_');
+        }
 
         // Some hair styles use 'adult/' folder instead of 'male/female/'
         const folder = ADULT_ONLY_HAIR_STYLES.has(style)
@@ -375,9 +498,32 @@ class AvatarAssetLoaderService {
           return `${baseUrl}assets/avatars/lpc/beards/mustache/${mustacheType}/${color}.png`;
         }
 
+        if (style.startsWith('goatee')) {
+          const goateeType = style.replace('goatee_', '') || 'basic';
+          return `${baseUrl}assets/avatars/lpc/beards/goatee/${goateeType}/${color}.png`;
+        }
+
         // Remove 'beard_' prefix if present
         const beardStyle = style.replace('beard_', '');
         return `${baseUrl}assets/avatars/lpc/beards/beard/${beardStyle}/${color}.png`;
+      }
+
+      case 'tail': {
+        // tail_cat_tail -> body/tail/cat/{bodyType}/default.png
+        const tailType = parts.slice(1).join('_');
+        return this.getTailPath(baseUrl, tailType, bodyType);
+      }
+
+      case 'wings_bg': {
+        // wings_bg_bat_wings -> body/wings/bat/adult/bg/{color}.png
+        const wingTypeBg = parts.slice(2).join('_');
+        return this.getWingsPath(baseUrl, wingTypeBg, bodyType, 'bg');
+      }
+
+      case 'wings_fg': {
+        // wings_fg_bat_wings -> body/wings/bat/adult/fg/{color}.png
+        const wingTypeFg = parts.slice(2).join('_');
+        return this.getWingsPath(baseUrl, wingTypeFg, bodyType, 'fg');
       }
 
       case 'top': {
@@ -399,6 +545,21 @@ class AvatarAssetLoaderService {
         const shoesType = parts[1];
         const color = parts[2] || DEFAULT_COLOR;
         return this.getShoesPath(baseUrl, shoesType, bodyType, color);
+      }
+
+      case 'hat': {
+        // hat_crown_white -> hat type "crown", color "white"
+        // hat_helmet_cloth_white -> hat type "helmet_cloth", color "white"
+        // Color is always the last part, hat type is everything in between
+        const color = parts[parts.length - 1] || DEFAULT_COLOR;
+        const hatType = parts.slice(1, -1).join('_'); // Everything between 'hat_' and '_color'
+        return this.getHatPath(baseUrl, hatType, bodyType, color);
+      }
+
+      case 'glasses': {
+        // glasses_glasses -> facial/glasses/glasses/adult.png
+        const glassesType = parts.slice(1).join('_');
+        return this.getGlassesPath(baseUrl, glassesType);
       }
 
       case 'accessory': {
@@ -455,8 +616,12 @@ class AvatarAssetLoaderService {
     const bottomMappings: Record<string, string> = {
       'pants': `legs/pants/${mappedBodyType}`,
       'pants_formal': `legs/formal/${mappedBodyType}`,
+      'pants_fur': `legs/fur/${mappedBodyType}`,
+      'pants_legion': `legs/legion/${mappedBodyType}`,
       'jeans': `legs/pants/${mappedBodyType}`,
       'shorts': `legs/shorts/shorts/${mappedBodyType}`,
+      'shorts_cargo': `legs/shorts/cargo/${mappedBodyType}`,
+      'shorts_legion': `legs/shorts/legion/${mappedBodyType}`,
       'skirt': `legs/skirts/plain/female`,
       'leggings': `legs/leggings/${mappedBodyType}`,
       'pantaloons': `legs/pantaloons/${mappedBodyType}`,
@@ -479,8 +644,14 @@ class AvatarAssetLoaderService {
       'sneakers': `feet/shoes/${mappedBodyType}`,
       'boots': `feet/boots/${mappedBodyType}`,
       'boots2': `feet/boots2/${mappedBodyType}`,
+      'boots_armor': `feet/armor/${mappedBodyType}`,
+      'boots_fur': `feet/fur/${mappedBodyType}`,
+      'boots_legion': `feet/legion/${mappedBodyType}`,
       'sandals': `feet/sandals/${mappedBodyType}`,
+      'sandals2': `feet/sandals2/${mappedBodyType}`,
       'slippers': `feet/slippers/${mappedBodyType}`,
+      'slippers2': `feet/slippers2/${mappedBodyType}`,
+      'socks': `feet/socks/${mappedBodyType}`,
       'dress_shoes': `feet/shoes2/${mappedBodyType}`,
     };
 
@@ -489,7 +660,7 @@ class AvatarAssetLoaderService {
   }
 
   /**
-   * Get LPC path for accessories
+   * Get LPC path for accessories (legacy)
    */
   private getAccessoryPath(baseUrl: string, accType: string): string {
     const accPaths: Record<string, string> = {
@@ -505,6 +676,271 @@ class AvatarAssetLoaderService {
     };
 
     const path = accPaths[accType] || `facial/glasses/${accType}/adult.png`;
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Get LPC path for creature/species heads
+   * 
+   * LPC head structure varies:
+   * - male/female folders: human, lizard, minotaur, orc, wolf
+   * - adult folder: all others (goblin, troll, skeleton, vampire, zombie, alien, etc.)
+   */
+  private getHeadPath(baseUrl: string, species: string, bodyType: BodyType): string {
+    const mappedBodyType = BODY_TYPE_MAPPINGS.face[bodyType] || 'male';
+    const DEFAULT_FUR_COLOR = 'fur_brown';
+    const DEFAULT_SKIN_COLOR = 'light';
+
+    // Heads that use male/female folder structure
+    const maleFemaleFolderHeads = ['human', 'lizard', 'minotaur', 'orc', 'wolf'];
+    
+    // Build path based on folder structure
+    const getHeadFolder = (sp: string): string => {
+      if (maleFemaleFolderHeads.includes(sp)) {
+        return mappedBodyType; // 'male' or 'female'
+      }
+      return 'adult'; // All others use 'adult' folder
+    };
+
+    // Map species to actual folder and color
+    const headMappings: Record<string, string> = {
+      // === male/female folder heads ===
+      'wolf': `head/heads/wolf/${mappedBodyType}/${DEFAULT_FUR_COLOR}.png`,
+      'lizard': `head/heads/lizard/${mappedBodyType}/${DEFAULT_SKIN_COLOR}.png`,
+      'reptile': `head/heads/lizard/${mappedBodyType}/${DEFAULT_SKIN_COLOR}.png`,
+      'orc': `head/heads/orc/${mappedBodyType}/${DEFAULT_SKIN_COLOR}.png`,
+      'minotaur': `head/heads/minotaur/${mappedBodyType}/${DEFAULT_FUR_COLOR}.png`,
+      
+      // === adult folder heads ===
+      'goblin': `head/heads/goblin/adult/${DEFAULT_SKIN_COLOR}.png`,
+      'troll': `head/heads/troll/adult/${DEFAULT_SKIN_COLOR}.png`,
+      'skeleton': `head/heads/skeleton/adult/skeleton.png`, // Special: only has skeleton.png
+      'vampire': `head/heads/vampire/adult/${DEFAULT_SKIN_COLOR}.png`,
+      'zombie': `head/heads/zombie/adult/${DEFAULT_SKIN_COLOR}.png`,
+      'alien': `head/heads/alien/adult/${DEFAULT_SKIN_COLOR}.png`,
+      
+      // === Mapped types (use existing assets) ===
+      'cat': `head/heads/mouse/adult/${DEFAULT_FUR_COLOR}.png`, // No cat head, use mouse
+      'demon': `head/heads/orc/${mappedBodyType}/${DEFAULT_SKIN_COLOR}.png`, // Use orc
+      'cyclops': `head/heads/orc/${mappedBodyType}/${DEFAULT_SKIN_COLOR}.png`, // Use orc
+    };
+
+    const path = headMappings[species];
+    if (path) {
+      return `${baseUrl}assets/avatars/lpc/${path}`;
+    }
+
+    // Fallback: try adult folder first (most common)
+    return `${baseUrl}assets/avatars/lpc/head/heads/${species}/adult/${DEFAULT_SKIN_COLOR}.png`;
+  }
+
+  /**
+   * Get LPC path for decorative ears
+   */
+  private getEarsPath(baseUrl: string, earType: string, bodyType: BodyType): string {
+    // LPC ears have different structures:
+    // - Some have adult/{color}.png (elven, dragon, etc.)
+    // - Some have adult_front.png single file (cat, wolf)
+    const DEFAULT_EAR_COLOR = 'black';
+
+    const earMappings: Record<string, string> = {
+      // Ears with adult/ folder structure
+      'elven_ears': `head/ears/elven/adult/${DEFAULT_EAR_COLOR}.png`,
+      'elven_ears_thin': `head/ears/long/adult/${DEFAULT_EAR_COLOR}.png`,
+      'dog_ears': `head/ears/big/adult/${DEFAULT_EAR_COLOR}.png`,
+      'feathered_ears': `head/ears/avyon/adult/${DEFAULT_EAR_COLOR}.png`,
+      'dragon_ears': `head/ears/dragon/adult/${DEFAULT_EAR_COLOR}.png`,
+      // Ears with adult_front/ folder structure (cat, wolf)
+      'cat_ears': `head/ears/cat/adult_front/${DEFAULT_EAR_COLOR}.png`,
+      'wolf_ears': `head/ears/wolf/adult_front/${DEFAULT_EAR_COLOR}.png`,
+      // Earrings
+      'ear_studs': `facial/earrings/studs/adult.png`,
+      'ear_rings': `facial/earrings/rings/adult.png`,
+    };
+
+    const path = earMappings[earType] || `head/ears/${earType.replace('_ears', '')}/adult/${DEFAULT_EAR_COLOR}.png`;
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Get LPC path for horns
+   */
+  private getHornsPath(baseUrl: string, hornType: string, bodyType: BodyType): string {
+    // LPC horns use adult/bg folder with color variants
+    // Structure: head/horns/{type}/adult/bg/{color}.png
+    const DEFAULT_HORN_COLOR = 'black';
+
+    // Remove 'horns_' prefix if present
+    const hornStyle = hornType.replace('horns_', '');
+
+    // Available horn types: backwards, curled
+    const hornMappings: Record<string, string> = {
+      'backwards': `head/horns/backwards/adult/bg/${DEFAULT_HORN_COLOR}.png`,
+      'curled': `head/horns/curled/adult/bg/${DEFAULT_HORN_COLOR}.png`,
+      'small': `head/horns/curled/adult/bg/${DEFAULT_HORN_COLOR}.png`, // Use curled
+      'demon': `head/horns/backwards/adult/bg/${DEFAULT_HORN_COLOR}.png`, // Use backwards
+    };
+
+    const path = hornMappings[hornStyle] || `head/horns/${hornStyle}/adult/bg/${DEFAULT_HORN_COLOR}.png`;
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Get LPC path for tails
+   */
+  private getTailPath(baseUrl: string, tailType: string, bodyType: BodyType): string {
+    // LPC tails use adult/bg folder with color variants
+    // Structure: body/tail/{type}/adult/bg/{color}.png
+    const DEFAULT_TAIL_COLOR = 'black';
+
+    // Remove '_tail' suffix if present
+    const tailStyle = tailType.replace('_tail', '');
+
+    // Available tail types: cat, fluffy, lizard, wolf
+    const tailMappings: Record<string, string> = {
+      'cat': `body/tail/cat/adult/bg/${DEFAULT_TAIL_COLOR}.png`,
+      'wolf': `body/tail/wolf/adult/bg/${DEFAULT_TAIL_COLOR}.png`,
+      'fox': `body/tail/fluffy/adult/bg/${DEFAULT_TAIL_COLOR}.png`, // Use fluffy for fox
+      'lizard': `body/tail/lizard/adult/bg/${DEFAULT_TAIL_COLOR}.png`,
+      'dragon': `body/tail/lizard/adult/bg/${DEFAULT_TAIL_COLOR}.png`, // Use lizard for dragon
+      'demon': `body/tail/cat/adult/bg/${DEFAULT_TAIL_COLOR}.png`, // Use cat for demon
+    };
+
+    const path = tailMappings[tailStyle] || `body/tail/${tailStyle}/adult/bg/${DEFAULT_TAIL_COLOR}.png`;
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Get LPC path for wings (supports bg and fg layers)
+   */
+  private getWingsPath(baseUrl: string, wingType: string, bodyType: BodyType, layer: 'bg' | 'fg' = 'bg'): string {
+    const DEFAULT_WING_COLOR = 'black';
+
+    // Remove '_wings' suffix if present
+    const wingStyle = wingType.replace('_wings', '');
+
+    // Wing folder structures vary by type and layer:
+    // - bat, feathered, lizard: adult/{layer}/{color}.png
+    // - monarch: base/{layer}/{color}.png (only has bg, use base for fg too)
+    // - pixie: solid/{color}.png (no fg layer, use solid for both)
+    // Wing folder structures:
+    // - bat, feathered, lizard: adult/{bg|fg}/{color}.png
+    // - monarch: base/{bg|fg}/{color}.png
+    // - pixie, dragonfly: solid/{bg|fg}/{color}.png
+    // - lunar: {bg|fg}/{color}.png (no subfolder)
+    const getWingPath = (style: string, lyr: string): string => {
+      switch (style) {
+        case 'bat':
+        case 'demon':
+          return `body/wings/bat/adult/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'angel':
+        case 'feathered':
+          return `body/wings/feathered/adult/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'butterfly':
+          return `body/wings/monarch/base/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'fairy':
+        case 'pixie':
+          return `body/wings/pixie/solid/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'dragonfly':
+          return `body/wings/dragonfly/solid/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'lunar':
+          // lunar has bg/fg directly at root (no subfolder)
+          return `body/wings/lunar/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        case 'dragon':
+        case 'lizard':
+          return `body/wings/lizard/adult/${lyr}/${DEFAULT_WING_COLOR}.png`;
+        default:
+          return `body/wings/${style}/adult/${lyr}/${DEFAULT_WING_COLOR}.png`;
+      }
+    };
+
+    const path = getWingPath(wingStyle, layer);
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Get LPC path for hats and helmets
+   *
+   * LPC hat folder structure:
+   * - hat/cloth/{style}/adult/{color}.png (bandana, hood, etc.)
+   * - hat/formal/{style}/adult/{color}.png (crown, tiara, bowler, tophat)
+   * - hat/helmet/{style}/adult/{color}.png OR {style}/{male|female}/{color}.png
+   *   Some helmets use male/female folders: barbuta, close, flattop, greathelm
+   *   Others use adult folder: armet, barbarian_viking, kettle, legion, mail, nasal, etc.
+   *   Colors for helmets: base, brass, bronze, ceramic, copper, gold, iron, silver, steel
+   */
+  private getHatPath(baseUrl: string, hatType: string, bodyType: BodyType, color: string): string {
+    // Default helmet metal color (helmets use metal colors, not cloth colors)
+    const DEFAULT_HELMET_COLOR = 'steel';
+    // Map body type for helmets that use male/female folders
+    const mappedBodyType = BODY_TYPE_MAPPINGS.face[bodyType] || 'male';
+
+    const hatMappings: Record<string, string> = {
+      // === Formal hats (hat/formal/) ===
+      'crown': `hat/formal/crown/adult/gold.png`,
+      'tiara': `hat/formal/tiara/adult/gold.png`,
+      'tophat': `hat/formal/tophat/adult/black.png`,
+      'bowler': `hat/formal/bowler/adult/black.png`,
+      'fedora': `hat/formal/bowler/adult/black.png`, // Use bowler as fallback
+      'tricorn': `hat/formal/bowler/adult/black.png`, // Use bowler as fallback
+      'circlet': `hat/formal/tiara/adult/silver.png`,
+      'diadem': `hat/formal/tiara/adult/gold.png`,
+
+      // === Cloth hats (hat/cloth/) ===
+      'bandana': `hat/cloth/bandana/adult/red.png`,
+      'hood': `hat/cloth/hood/adult/gray.png`,
+      'beanie': `hat/cloth/hood_sack/adult/gray.png`, // Use hood_sack as beanie
+      'cap': `hat/cloth/feather_cap/adult/gray.png`, // Use feather_cap as cap
+      'beret': `hat/cloth/feather_cap/alt/adult/gray.png`, // Use alt feather cap
+      'headband': `hat/cloth/bandana/adult/white.png`, // Use bandana as headband
+      'turban': `hat/cloth/hijab/male/white.png`, // Use hijab as turban
+      'veil': `hat/cloth/hijab/thin/white.png`, // Use hijab thin as veil
+
+      // === Helmets with male/female folders (hat/helmet/{style}/{male|female}/) ===
+      'helmet_barbute': `hat/helmet/barbuta/${mappedBodyType}/${DEFAULT_HELMET_COLOR}.png`,
+      'helmet_plate': `hat/helmet/flattop/${mappedBodyType}/${DEFAULT_HELMET_COLOR}.png`,
+      'mask': `hat/helmet/close/${mappedBodyType}/${DEFAULT_HELMET_COLOR}.png`,
+
+      // === Helmets with adult folder (hat/helmet/{style}/adult/) ===
+      'helmet_chain': `hat/helmet/mail/adult/${DEFAULT_HELMET_COLOR}.png`,
+      'helmet_cloth': `hat/helmet/kettle/adult/${DEFAULT_HELMET_COLOR}.png`, // Kettle helm
+      'helmet_jousting': `hat/helmet/armet/adult/${DEFAULT_HELMET_COLOR}.png`, // Armet jousting helm
+      'helmet_legion': `hat/helmet/legion/adult/${DEFAULT_HELMET_COLOR}.png`,
+      'helmet_metal': `hat/helmet/nasal/adult/${DEFAULT_HELMET_COLOR}.png`, // Simple nasal helm
+      'helmet_viking': `hat/helmet/barbarian_viking/adult/${DEFAULT_HELMET_COLOR}.png`,
+
+      // === Hoods with chain/cloth (hat/cloth/) ===
+      'hood_chain': `hat/cloth/hood/adult/gray.png`, // Use regular hood
+      'hood_cloth': `hat/cloth/hood/adult/brown.png`,
+      'cowl': `hat/cloth/hood_sack/adult/brown.png`, // Use hood_sack as cowl
+    };
+
+    const path = hatMappings[hatType];
+    if (path) {
+      return `${baseUrl}assets/avatars/lpc/${path}`;
+    }
+
+    // Fallback: try cloth category
+    return `${baseUrl}assets/avatars/lpc/hat/cloth/${hatType}/adult/white.png`;
+  }
+
+  /**
+   * Get LPC path for glasses and eyewear
+   */
+  private getGlassesPath(baseUrl: string, glassesType: string): string {
+    const glassesMappings: Record<string, string> = {
+      'glasses': 'facial/glasses/glasses/adult.png',
+      'glasses_round': 'facial/glasses/round/adult.png',
+      'glasses_nerd': 'facial/glasses/nerd/adult.png',
+      'sunglasses': 'facial/glasses/sunglasses/adult.png',
+      'shades': 'facial/glasses/shades/adult.png',
+      'shades_aviator': 'facial/glasses/aviator/adult.png',
+      'eyepatch': 'facial/eyepatch/eyepatch/adult.png',
+      'monocle': 'facial/glasses/monocle/adult.png',
+      'goggles': 'facial/glasses/goggles/adult.png',
+    };
+
+    const path = glassesMappings[glassesType] || `facial/glasses/${glassesType}/adult.png`;
     return `${baseUrl}assets/avatars/lpc/${path}`;
   }
 
@@ -549,6 +985,35 @@ class AvatarAssetLoaderService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Reset failed assets cache to allow retrying
+   */
+  resetFailedAssets(): void {
+    this.failedAssets.clear();
+    console.log('[AvatarAssetLoader] Failed assets cache cleared - ready for retry');
+  }
+
+  /**
+   * Get count of currently loading assets
+   */
+  getLoadingCount(): number {
+    return this.loadingPromises.size;
+  }
+
+  /**
+   * Get count of loaded assets
+   */
+  getLoadedCount(): number {
+    return this.loadedAssets.size;
+  }
+
+  /**
+   * Get count of failed assets
+   */
+  getFailedCount(): number {
+    return this.failedAssets.size;
   }
 
   /**
