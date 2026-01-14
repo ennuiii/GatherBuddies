@@ -2,126 +2,38 @@
 
 ## Overview
 
-Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Players navigate as avatars, chat via proximity video, and launch games through portal zones. Uses Colyseus for world state (inside GameBuddieGamesServer) and GameBuddiesTemplate for client structure.
+Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Players navigate as avatars, chat via proximity video, and launch games through arcade cabinet portals. Uses Colyseus for world state (inside GameBuddieGamesServer) and GameBuddiesTemplate for client structure.
 
-## Architecture Summary
+## Milestones
 
-```
-Client (GameBuddiesTemplate pattern)     Server (GameBuddieGamesServer)
-├── HomePage (create/join)               ├── Socket.IO (room management)
-├── LobbyPage (video chat)               ├── Colyseus (2D world state)
-└── GamePage (Phaser3 world)             └── Shared Express httpServer
-```
+- [v1.0 MVP](milestones/v1.0-ROADMAP.md) (Phases 1-3) - SHIPPED 2026-01-14
 
-## Phases
+## Completed Milestones
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>v1.0 MVP (Phases 1, 1.5, 2, 3) - SHIPPED 2026-01-14</summary>
 
-- [x] **Phase 1: Foundation** - Standalone Colyseus server + Phaser client (COMPLETED - migrated)
-- [x] **Phase 1.5: Integration** - Migrate to GameBuddieGamesServer + GameBuddiesTemplate structure (COMPLETE)
-- [x] **Phase 2: Social Features** - Proximity video chat, text chat, avatar selection (COMPLETE)
-- [ ] **Phase 3: Game Integration** - Portal zones and game launching via URLs
+- [x] Phase 1: Foundation (2/2 plans) - completed 2026-01-12
+- [x] Phase 1.5: Integration (3/3 plans) - completed 2026-01-12
+- [x] Phase 2: Social Features (6/6 plans) - completed 2026-01-13
+- [x] Phase 3: Game Integration (2/2 plans) - completed 2026-01-14
 
-## Phase Details
-
-### Phase 1: Foundation (COMPLETED - needs migration)
-**Goal**: Working Phaser3 2D world with avatar movement and Colyseus state sync
-**Status**: Complete but standalone - needs integration into platform
-
-What was built:
-- Standalone Colyseus server with HubRoom (GameBuddiesHub/server)
-- Phaser3 client with Bootstrap/Game scenes (GameBuddiesHub/client)
-- Character classes: Player, MyPlayer, OtherPlayer
-- WASD/Arrow movement with animation
-- Basic multiplayer position sync
-
-Plans completed:
-- [x] 01-01: Server foundation - Colyseus setup with HubRoom
-- [x] 01-02: Client foundation - Phaser world with avatar movement
-
-### Phase 1.5: Integration (NEW)
-**Goal**: Migrate standalone implementation into GameBuddies platform infrastructure
-**Depends on**: Phase 1
-**Research**: Complete - Colyseus runs on port 3002, Socket.IO on 3001
-**Plans**: 3 plans
-
-Plans:
-- [x] 1.5-01: Add Colyseus to GameBuddieGamesServer
-- [x] 1.5-02: Create Hub client from GameBuddiesTemplate
-- [x] 1.5-03: Integrate Phaser into GamePage
-
-Key deliverables:
-- Colyseus Server on port 3002 (separate from Socket.IO 3001)
-- HubRoom for 2D world state sync
-- Hub client using GameBuddiesTemplate structure
-- Phaser3 canvas in GamePage component
-- Multiplayer avatar movement via Colyseus
-
-### Phase 2: Social Features (COMPLETE)
-**Goal**: Proximity-based communication enabling players to meet and chat naturally
-**Depends on**: Phase 1.5
-**Research**: Complete
-**Status**: Complete
-**Plans**: 6 plans
-
-Plans:
-- [x] 2-01: Proximity Detection - Physics overlap with debounced events
-- [x] 2-02: Conversation State - Server-authoritative conversation lifecycle
-- [x] 2-03: Video Chat Integration
-- [x] 2-04: Audio Routing - Web Audio API gain-based isolation
-- [x] 2-05: Text Chat - Speech bubbles via Phaser, ChatInput component
-- [x] 2-06: Avatar Selection - In-game character selection overlay
-
-Key deliverables:
-- Proximity detection (trigger when avatars near each other)
-- Video/audio chat via WebRTC (reuse template's WebRTCContext)
-- Text chat with speech bubbles over avatars
-- Online players list UI
-- Preset avatar selection
-
-### Phase 3: Game Integration
-**Goal**: Portal zones that launch GameBuddies games
-**Depends on**: Phase 2
-**Research**: Complete
-**Status**: In progress
-**Plans**: 2 plans
-
-Plans:
-- [x] 3-01: Arcade Cabinet Portals - Cabinet objects with E key interaction
-- [ ] 3-02: Game Launch UI - React modal for game launching
-
-Key deliverables:
-- Portal zone tiles on the map
-- Portal interaction UI (press E to launch)
-- URL navigation to gamebuddies.io/gamename
-- Optional: group launching (all nearby players)
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in order: 1 → 1.5 → 2 → 3
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation | 2/2 | Complete (standalone) | 2026-01-12 |
-| 1.5. Integration | 3/3 | Complete | 2026-01-12 |
-| 2. Social Features | 6/6 | Complete | 2026-01-13 |
-| 3. Game Integration | 1/2 | In progress | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation | v1.0 | 2/2 | Complete | 2026-01-12 |
+| 1.5. Integration | v1.0 | 3/3 | Complete | 2026-01-12 |
+| 2. Social Features | v1.0 | 6/6 | Complete | 2026-01-13 |
+| 3. Game Integration | v1.0 | 2/2 | Complete | 2026-01-14 |
 
 ## Notes
 
-**Migration Strategy:**
-- Don't delete GameBuddiesHub/ - use as reference
-- Copy Phaser code into new template-based client
-- Move Colyseus room logic into GameBuddieGamesServer
-- Test each piece as it's migrated
-
-**What to Reuse from Phase 1:**
-- `HubRoom` schema and logic → ✅ GameBuddieGamesServer/games/hub/ (1.5-01)
-- `Bootstrap.ts`, `Game.ts` scenes → Hub client GamePage (1.5-03)
-- `Player.ts`, `MyPlayer.ts`, `OtherPlayer.ts` → Hub client characters/ (1.5-03)
-- `CharacterAnims.ts` → Hub client anims/ (1.5-03)
-- `Network.ts` → Adapt for Colyseus inside unified server (1.5-03)
-- Assets (tilemap, sprites) → Hub client public/ (1.5-03)
+**v1.0 delivered:**
+- Virtual 2D lobby world with Phaser3
+- Proximity-based video chat with conversation isolation
+- 4 preset avatar selection
+- 8 arcade cabinet game portals with invite notifications
+- Text chat with speech bubbles
