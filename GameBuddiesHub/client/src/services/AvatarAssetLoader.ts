@@ -1,13 +1,17 @@
 /**
  * Avatar Asset Loader
  *
- * Manages loading of LPC sprite layer assets from local files.
- * Assets are downloaded at build time by scripts/download-lpc-assets.js
+ * Manages loading of LPC sprite layer assets.
+ * Path resolution follows LPC Universal Spritesheet Character Generator conventions.
+ * Repository: https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator
+ *
+ * Key concept: Each asset type has body-type-specific paths.
+ * Body types: male, female, muscular, child, teen, pregnant
+ * Some body types share paths (muscular→male for some assets, pregnant→female)
  */
 
 import Phaser from 'phaser';
-import type { AvatarConfig } from '../types/avatar';
-import { HAIR_STYLES } from './AvatarManifest';
+import type { AvatarConfig, BodyType } from '../types/avatar';
 
 // Get base URL for assets (handles /hub/ prefix in production)
 const getBaseUrl = () => import.meta.env.BASE_URL || '/';
@@ -16,17 +20,74 @@ const getBaseUrl = () => import.meta.env.BASE_URL || '/';
 export const LPC_FRAME_WIDTH = 64;
 export const LPC_FRAME_HEIGHT = 64;
 export const LPC_COLS = 13; // Columns in LPC Universal sheet
-export const LPC_ROWS = 21; // Rows in LPC Universal sheet
+export const LPC_ROWS = 46; // Rows in LPC Extended sheet (includes idle, run, sit, jump)
+
+// Default color for assets
+const DEFAULT_COLOR = 'white';
+const DEFAULT_HAIR_COLOR = 'black';
 
 // Preload these assets during boot for faster initial load
-// NOTE: skin tone must be one that exists for all body types
+// Keys format: category_variant (bodyType is passed separately)
 const PRELOAD_ASSETS = [
-  'body_male_light',
-  'hair_short',
-  'top_tshirt',
-  'bottom_jeans',
-  'shoes_sneakers',
+  { key: 'body_light', bodyType: 'male' as BodyType },
+  { key: 'face_light', bodyType: 'male' as BodyType },
+  { key: 'hair_pixie_black', bodyType: 'male' as BodyType },
+  { key: 'top_tshirt_white', bodyType: 'male' as BodyType },
+  { key: 'bottom_pants_white', bodyType: 'male' as BodyType },
+  { key: 'shoes_shoes_white', bodyType: 'male' as BodyType },
 ];
+
+/**
+ * Body type path mappings for different asset categories
+ * Based on LPC sheet_definitions/*.json
+ */
+const BODY_TYPE_MAPPINGS = {
+  // Hair: muscular/teen use male, pregnant uses female
+  hair: {
+    male: 'male',
+    female: 'female',
+    muscular: 'male',
+    teen: 'male',
+    child: 'male', // child uses male paths for hair
+    pregnant: 'female',
+  },
+  // Shoes: teen/pregnant use female, muscular uses male
+  shoes: {
+    male: 'male',
+    female: 'female',
+    muscular: 'male',
+    teen: 'female',
+    child: 'male',
+    pregnant: 'female',
+  },
+  // Tops: each body type has its own or maps to similar
+  tops: {
+    male: 'male',
+    female: 'female',
+    muscular: 'male', // muscular often has own, fallback to male
+    teen: 'teen',
+    child: 'male',
+    pregnant: 'pregnant',
+  },
+  // Bottoms: similar to tops
+  bottoms: {
+    male: 'male',
+    female: 'female',
+    muscular: 'male',
+    teen: 'male',
+    child: 'male',
+    pregnant: 'female',
+  },
+  // Face/head: male, female, child available
+  face: {
+    male: 'male',
+    female: 'female',
+    muscular: 'male',
+    teen: 'male',
+    child: 'child',
+    pregnant: 'female',
+  },
+};
 
 class AvatarAssetLoaderService {
   private scene: Phaser.Scene | null = null;
@@ -49,7 +110,6 @@ class AvatarAssetLoaderService {
 
   /**
    * Preload essential assets during boot
-   * Returns a promise that resolves when all essential assets are loaded
    */
   async preloadEssentials(): Promise<void> {
     if (!this.scene) {
@@ -59,79 +119,104 @@ class AvatarAssetLoaderService {
 
     console.log('[AvatarAssetLoader] Preloading essential assets...');
 
-    // Load all essential assets in parallel
-    const promises = PRELOAD_ASSETS.map(key => this.loadAsset(key));
+    const promises = PRELOAD_ASSETS.map(({ key, bodyType }) =>
+      this.loadAssetWithBodyType(key, bodyType)
+    );
 
     try {
       await Promise.all(promises);
       console.log('[AvatarAssetLoader] Essential assets loaded successfully');
     } catch (error) {
       console.error('[AvatarAssetLoader] Failed to preload some assets:', error);
-      // Don't throw - allow game to continue with legacy characters
     }
   }
 
   /**
-   * Load a specific asset and return promise
+   * Load a specific asset with body type context
+   * Returns the actual texture key used in Phaser (includes bodyType for body-specific assets)
    */
-  async loadAsset(key: string): Promise<void> {
+  async loadAssetWithBodyType(key: string, bodyType: BodyType): Promise<string> {
     if (!this.scene) {
       throw new Error('[AvatarAssetLoader] Not initialized');
     }
 
-    // Already loaded
-    if (this.loadedAssets.has(key)) {
-      return;
+    // Texture key includes bodyType for body-type-specific assets
+    const textureKey = this.getTextureKey(key, bodyType);
+    const cacheKey = textureKey;
+
+    if (this.loadedAssets.has(cacheKey)) {
+      return textureKey;
     }
 
-    // Already loading
-    const existing = this.loadingPromises.get(key);
+    const existing = this.loadingPromises.get(cacheKey);
     if (existing) {
-      return existing;
+      return existing.then(() => textureKey);
     }
 
-    // Start loading
     const promise = new Promise<void>((resolve, reject) => {
-      const assetPath = this.getAssetPath(key);
-      console.log(`[AvatarAssetLoader] Loading: ${key} from ${assetPath}`);
+      const assetPath = this.getAssetPath(key, bodyType);
+      console.log(`[AvatarAssetLoader] Loading: ${textureKey} from ${assetPath}`);
 
-      // Queue the asset
-      this.scene!.load.spritesheet(key, assetPath, {
+      this.scene!.load.spritesheet(textureKey, assetPath, {
         frameWidth: LPC_FRAME_WIDTH,
         frameHeight: LPC_FRAME_HEIGHT,
       });
 
-      // Listen for this specific file completion
       const onComplete = (loadedKey: string) => {
-        if (loadedKey === key) {
+        if (loadedKey === textureKey) {
           this.scene!.load.off('filecomplete', onComplete);
           this.scene!.load.off('loaderror', onError);
-          this.loadedAssets.add(key);
-          this.loadingPromises.delete(key);
-          console.log(`[AvatarAssetLoader] Loaded: ${key}`);
+          this.loadedAssets.add(cacheKey);
+          this.loadingPromises.delete(cacheKey);
+          console.log(`[AvatarAssetLoader] Loaded: ${textureKey}`);
           resolve();
         }
       };
 
       const onError = (file: Phaser.Loader.File) => {
-        if (file.key === key) {
+        if (file.key === textureKey) {
           this.scene!.load.off('filecomplete', onComplete);
           this.scene!.load.off('loaderror', onError);
-          this.loadingPromises.delete(key);
-          console.error(`[AvatarAssetLoader] Failed to load: ${key}`);
-          reject(new Error(`Failed to load asset: ${key}`));
+          this.loadingPromises.delete(cacheKey);
+          console.error(`[AvatarAssetLoader] Failed to load: ${textureKey} from ${assetPath}`);
+          reject(new Error(`Failed to load asset: ${textureKey}`));
         }
       };
 
       this.scene!.load.on('filecomplete', onComplete);
       this.scene!.load.on('loaderror', onError);
-
-      // Start the loader
       this.scene!.load.start();
     });
 
-    this.loadingPromises.set(key, promise);
-    return promise;
+    this.loadingPromises.set(cacheKey, promise);
+    await promise;
+    return textureKey;
+  }
+
+  /**
+   * Get the texture key that will be used in Phaser
+   * For body-type-specific assets, includes bodyType in the key
+   */
+  getTextureKey(key: string, bodyType: BodyType): string {
+    const parts = key.split('_');
+    const category = parts[0];
+
+    // These categories have body-type-specific paths, so need unique keys
+    const bodyTypeSpecificCategories = ['body', 'face', 'hair', 'top', 'bottom', 'shoes'];
+
+    if (bodyTypeSpecificCategories.includes(category)) {
+      return `${key}_${bodyType}`;
+    }
+
+    // Other assets (eyes, accessories) don't vary by body type
+    return key;
+  }
+
+  /**
+   * Legacy method for compatibility
+   */
+  async loadAsset(key: string): Promise<string> {
+    return this.loadAssetWithBodyType(key, 'male');
   }
 
   /**
@@ -139,12 +224,14 @@ class AvatarAssetLoaderService {
    */
   async loadForConfig(config: AvatarConfig): Promise<string[]> {
     const keys = this.getRequiredAssetKeys(config);
+    const bodyType = config.body.type;
+
     console.log(`[AvatarAssetLoader] Loading ${keys.length} assets for config:`, keys);
 
-    // Load all required assets
-    const results = await Promise.allSettled(keys.map(key => this.loadAsset(key)));
+    const results = await Promise.allSettled(
+      keys.map(key => this.loadAssetWithBodyType(key, bodyType))
+    );
 
-    // Check for failures
     const failed = results.filter(r => r.status === 'rejected');
     if (failed.length > 0) {
       console.warn(`[AvatarAssetLoader] ${failed.length} assets failed to load`);
@@ -158,25 +245,33 @@ class AvatarAssetLoaderService {
    */
   getRequiredAssetKeys(config: AvatarConfig): string[] {
     const keys: string[] = [];
+    const skinTone = config.body.skinTone;
 
-    // Body
-    keys.push(`body_${config.body.type}_${config.body.skinTone}`);
+    // Body base
+    keys.push(`body_${skinTone}`);
+
+    // Face (head)
+    keys.push(`face_${skinTone}`);
+
+    // Eyes
+    if (config.eyes?.color) {
+      keys.push(`eyes_${config.eyes.color}`);
+    }
 
     // Hair (if not bald)
     if (config.hair.style !== 'bald') {
-      keys.push(`hair_${config.hair.style}`);
+      keys.push(`hair_${config.hair.style}_${DEFAULT_HAIR_COLOR}`);
+    }
 
-      // Check if hair style has back layer
-      const hairInfo = HAIR_STYLES.find(h => h.id === config.hair.style);
-      if (hairInfo?.hasBackLayer) {
-        keys.push(`hair_${config.hair.style}_back`);
-      }
+    // Beard
+    if (config.beard?.style && config.beard.style !== 'none') {
+      keys.push(`beard_${config.beard.style}_${DEFAULT_HAIR_COLOR}`);
     }
 
     // Clothing
-    keys.push(`top_${config.clothing.top}`);
-    keys.push(`bottom_${config.clothing.bottom}`);
-    keys.push(`shoes_${config.clothing.shoes}`);
+    keys.push(`top_${config.clothing.top}_${DEFAULT_COLOR}`);
+    keys.push(`bottom_${config.clothing.bottom}_${DEFAULT_COLOR}`);
+    keys.push(`shoes_${config.clothing.shoes}_${DEFAULT_COLOR}`);
 
     // Accessories
     for (const acc of config.accessories) {
@@ -187,65 +282,203 @@ class AvatarAssetLoaderService {
   }
 
   /**
-   * Convert asset key to local file path
-   * Asset keys follow format: category_type_variant
-   * Maps to: /assets/avatars/category/type/variant.png
+   * Get the file path for an asset key with body type context
+   *
+   * LPC Path Structure:
+   * - body: body/bodies/{bodyType}/{skin}.png
+   * - face: head/heads/human/{faceType}/{skin}.png
+   * - hair: hair/{style}/{gender}/{color}.png
+   * - eyes: eyes/human/adult/{color}.png
+   * - beard: beards/beard/{style}/{color}.png
+   * - top: torso/clothes/{category}/{type}/{bodyType}/{color}.png
+   * - bottom: legs/{type}/{bodyType}/{color}.png
+   * - shoes: feet/{type}/{bodyType}/{color}.png
+   * - accessory: facial/glasses/{type}/adult.png or hat/{category}/{type}/adult/{color}.png
    */
-  private getAssetPath(key: string): string {
+  private getAssetPath(key: string, bodyType: BodyType): string {
     const baseUrl = getBaseUrl();
     const parts = key.split('_');
     const category = parts[0];
 
     switch (category) {
       case 'body': {
-        // body_neutral_fair -> /assets/avatars/bodies/neutral/fair.png
-        const bodyType = parts[1];
-        const skinTone = parts[2];
-        return `${baseUrl}assets/avatars/bodies/${bodyType}/${skinTone}.png`;
+        // body_light -> body/bodies/{bodyType}/light.png
+        const skinTone = parts[1];
+        return `${baseUrl}assets/avatars/lpc/body/bodies/${bodyType}/${skinTone}.png`;
+      }
+
+      case 'face': {
+        // face_light -> head/heads/human/{faceType}/light.png
+        const skinTone = parts[1];
+        const faceType = BODY_TYPE_MAPPINGS.face[bodyType] || 'male';
+        return `${baseUrl}assets/avatars/lpc/head/heads/human/${faceType}/${skinTone}.png`;
       }
 
       case 'hair': {
-        // hair_short -> /assets/avatars/hair/short.png
-        // hair_long_back -> /assets/avatars/hair/long_back.png
-        const rest = parts.slice(1).join('_');
-        return `${baseUrl}assets/avatars/hair/${rest}.png`;
+        // hair_pixie_black -> hair/pixie/{gender}/black.png
+        // hair_flat_top_fade_black -> hair/flat_top_fade/{gender}/black.png
+        // Style can have underscores, color is always the last segment (single word)
+        const color = parts[parts.length - 1] || DEFAULT_HAIR_COLOR;
+        const style = parts.slice(1, -1).join('_'); // Everything between 'hair_' and '_color'
+        const gender = BODY_TYPE_MAPPINGS.hair[bodyType] || 'male';
+        console.log(`[AvatarAssetLoader] Hair path: style="${style}", color="${color}", gender="${gender}"`);
+        return `${baseUrl}assets/avatars/lpc/hair/${style}/${gender}/${color}.png`;
+      }
+
+      case 'eyes': {
+        // eyes_blue -> eyes/human/adult/blue.png
+        const color = parts[1];
+        return `${baseUrl}assets/avatars/lpc/eyes/human/adult/${color}.png`;
+      }
+
+      case 'beard': {
+        // beard_basic_black -> beards/beard/basic/black.png
+        // beard_mustache_basic_black -> beards/mustache/basic/black.png
+        const style = parts[1];
+        const color = parts[2] || DEFAULT_HAIR_COLOR;
+
+        if (style.startsWith('mustache')) {
+          const mustacheType = style.replace('mustache_', '');
+          return `${baseUrl}assets/avatars/lpc/beards/mustache/${mustacheType}/${color}.png`;
+        }
+
+        // Remove 'beard_' prefix if present
+        const beardStyle = style.replace('beard_', '');
+        return `${baseUrl}assets/avatars/lpc/beards/beard/${beardStyle}/${color}.png`;
       }
 
       case 'top': {
-        // top_tshirt -> /assets/avatars/tops/tshirt.png
-        const topType = parts.slice(1).join('_');
-        return `${baseUrl}assets/avatars/tops/${topType}.png`;
+        // top_shortsleeve_white -> torso/clothes/shortsleeve/shortsleeve/{bodyType}/white.png
+        const topType = parts[1];
+        const color = parts[2] || DEFAULT_COLOR;
+        return this.getTopPath(baseUrl, topType, bodyType, color);
       }
 
       case 'bottom': {
-        // bottom_jeans -> /assets/avatars/bottoms/jeans.png
-        const bottomType = parts.slice(1).join('_');
-        return `${baseUrl}assets/avatars/bottoms/${bottomType}.png`;
+        // bottom_pants_white -> legs/pants/{bodyType}/white.png
+        const bottomType = parts[1];
+        const color = parts[2] || DEFAULT_COLOR;
+        return this.getBottomPath(baseUrl, bottomType, bodyType, color);
       }
 
       case 'shoes': {
-        // shoes_sneakers -> /assets/avatars/shoes/sneakers.png
-        const shoesType = parts.slice(1).join('_');
-        return `${baseUrl}assets/avatars/shoes/${shoesType}.png`;
+        // shoes_shoes_white -> feet/shoes/{bodyType}/white.png
+        const shoesType = parts[1];
+        const color = parts[2] || DEFAULT_COLOR;
+        return this.getShoesPath(baseUrl, shoesType, bodyType, color);
       }
 
       case 'accessory': {
-        // accessory_glasses -> /assets/avatars/accessories/glasses.png
+        // accessory_glasses -> facial/glasses/glasses/adult.png
+        // accessory_hat_bandana -> hat/cloth/bandana/adult/white.png
         const accType = parts.slice(1).join('_');
-        return `${baseUrl}assets/avatars/accessories/${accType}.png`;
+        return this.getAccessoryPath(baseUrl, accType);
       }
 
       default:
         console.warn(`[AvatarAssetLoader] Unknown asset category: ${category}`);
-        return `${baseUrl}assets/avatars/${key}.png`;
+        return `${baseUrl}assets/avatars/lpc/${key}.png`;
     }
   }
 
   /**
-   * Check if an asset is loaded
+   * Get LPC path for top clothing
+   * Note: Some tops only exist for certain body types, we handle fallbacks
    */
-  isLoaded(key: string): boolean {
-    return this.loadedAssets.has(key);
+  private getTopPath(baseUrl: string, topType: string, bodyType: BodyType, color: string): string {
+    const mappedBodyType = BODY_TYPE_MAPPINGS.tops[bodyType] || 'male';
+
+    // tshirt only has female/teen, male uses shortsleeve
+    const tshirtPath = (mappedBodyType === 'female' || mappedBodyType === 'teen')
+      ? `torso/clothes/shortsleeve/tshirt/${mappedBodyType}`
+      : `torso/clothes/shortsleeve/shortsleeve/${mappedBodyType}`;
+
+    // Map our simplified names to LPC folder structure
+    const topMappings: Record<string, string> = {
+      'tshirt': tshirtPath,
+      'shortsleeve': `torso/clothes/shortsleeve/shortsleeve/${mappedBodyType}`,
+      'tanktop': `torso/clothes/sleeveless/sleeveless/${mappedBodyType}`,
+      'sleeveless': `torso/clothes/sleeveless/sleeveless/${mappedBodyType}`,
+      'longsleeve': `torso/clothes/longsleeve/longsleeve/${mappedBodyType}`,
+      'hoodie': `torso/clothes/longsleeve/longsleeve/${mappedBodyType}`,
+      'jacket': `torso/jacket/collared/${mappedBodyType}`,
+      'dress': `dress/slit/female`,
+      'suit': `torso/clothes/longsleeve/formal/${mappedBodyType}`,
+    };
+
+    const basePath = topMappings[topType] || `torso/clothes/shortsleeve/shortsleeve/${mappedBodyType}`;
+    return `${baseUrl}assets/avatars/lpc/${basePath}/${color}.png`;
+  }
+
+  /**
+   * Get LPC path for bottom clothing
+   */
+  private getBottomPath(baseUrl: string, bottomType: string, bodyType: BodyType, color: string): string {
+    const mappedBodyType = BODY_TYPE_MAPPINGS.bottoms[bodyType] || 'male';
+
+    const bottomMappings: Record<string, string> = {
+      'pants': `legs/pants/${mappedBodyType}`,
+      'pants_formal': `legs/formal/${mappedBodyType}`,
+      'jeans': `legs/pants/${mappedBodyType}`,
+      'shorts': `legs/shorts/shorts/${mappedBodyType}`,
+      'skirt': `legs/skirts/plain/female`,
+      'leggings': `legs/leggings/leggings/female`,
+      'pantaloons': `legs/pantaloons/pantaloons/${mappedBodyType}`,
+      'sweatpants': `legs/pants/${mappedBodyType}`,
+    };
+
+    const basePath = bottomMappings[bottomType] || `legs/pants/${mappedBodyType}`;
+    return `${baseUrl}assets/avatars/lpc/${basePath}/${color}.png`;
+  }
+
+  /**
+   * Get LPC path for shoes
+   */
+  private getShoesPath(baseUrl: string, shoesType: string, bodyType: BodyType, color: string): string {
+    const mappedBodyType = BODY_TYPE_MAPPINGS.shoes[bodyType] || 'male';
+
+    const shoesMappings: Record<string, string> = {
+      'shoes': `feet/shoes/${mappedBodyType}`,
+      'shoes2': `feet/shoes2/${mappedBodyType}`,
+      'sneakers': `feet/shoes/${mappedBodyType}`,
+      'boots': `feet/boots/${mappedBodyType}`,
+      'boots2': `feet/boots2/${mappedBodyType}`,
+      'sandals': `feet/sandals/${mappedBodyType}`,
+      'slippers': `feet/slippers/${mappedBodyType}`,
+      'dress_shoes': `feet/shoes2/${mappedBodyType}`,
+    };
+
+    const basePath = shoesMappings[shoesType] || `feet/shoes/${mappedBodyType}`;
+    return `${baseUrl}assets/avatars/lpc/${basePath}/${color}.png`;
+  }
+
+  /**
+   * Get LPC path for accessories
+   */
+  private getAccessoryPath(baseUrl: string, accType: string): string {
+    const accPaths: Record<string, string> = {
+      'glasses': 'facial/glasses/glasses/adult.png',
+      'glasses_round': 'facial/glasses/round/adult.png',
+      'glasses_nerd': 'facial/glasses/nerd/adult.png',
+      'sunglasses': 'facial/glasses/sunglasses/adult.png',
+      'shades': 'facial/glasses/shades/adult.png',
+      'hat_bandana': 'hat/cloth/bandana/adult/white.png',
+      'hat_hood': 'hat/cloth/hood/adult/white.png',
+      'hat_tophat': 'hat/formal/tophat/adult/black.png',
+      'hat_bowler': 'hat/formal/bowler/adult/black.png',
+    };
+
+    const path = accPaths[accType] || `facial/glasses/${accType}/adult.png`;
+    return `${baseUrl}assets/avatars/lpc/${path}`;
+  }
+
+  /**
+   * Check if an asset is loaded
+   * Uses the same texture key format as loadAssetWithBodyType
+   */
+  isLoaded(key: string, bodyType: BodyType = 'male'): boolean {
+    const textureKey = this.getTextureKey(key, bodyType);
+    return this.loadedAssets.has(textureKey);
   }
 
   /**
@@ -253,17 +486,23 @@ class AvatarAssetLoaderService {
    */
   areAllLoaded(config: AvatarConfig): boolean {
     const keys = this.getRequiredAssetKeys(config);
-    return keys.every(key => this.loadedAssets.has(key));
+    const bodyType = config.body.type;
+    return keys.every(key => this.loadedAssets.has(`${key}_${bodyType}`));
   }
 
   /**
    * Get the Phaser texture for an asset key
    */
   getTexture(key: string): Phaser.Textures.Texture | null {
-    if (!this.scene || !this.loadedAssets.has(key)) {
+    if (!this.scene) {
       return null;
     }
-    return this.scene.textures.get(key);
+    // Try to get texture regardless of loaded status (Phaser may have it)
+    try {
+      return this.scene.textures.get(key);
+    } catch {
+      return null;
+    }
   }
 
   /**

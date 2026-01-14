@@ -2,7 +2,8 @@
  * Avatar Manifest
  *
  * Central manifest of all available avatar customization options.
- * Based on assets available in public/assets/avatars/
+ * Based on assets available from LPC Universal Spritesheet Character Generator.
+ * Repository: https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator
  *
  * This is a static manifest - no runtime asset scanning needed.
  * Update this file when adding new assets to the game.
@@ -47,7 +48,7 @@ export interface SkinToneOption {
   hex: string;
 }
 
-// NOTE: Skin tone IDs must match filenames in public/assets/avatars/bodies/{bodyType}/*.png
+// NOTE: Skin tone IDs must match filenames in lpc/body/bodies/{bodyType}/*.png
 export const SKIN_TONES: SkinToneOption[] = [
   { id: 'light', displayName: 'Light', hex: '#FFE4C4' },
   { id: 'olive', displayName: 'Olive', hex: '#D4A574' },
@@ -59,7 +60,7 @@ export const SKIN_TONES: SkinToneOption[] = [
 ];
 
 // ============================================================================
-// Hair Styles
+// Hair Styles (from lpc/hair/*)
 // ============================================================================
 
 export interface HairStyleOption {
@@ -68,29 +69,32 @@ export interface HairStyleOption {
   hasBackLayer: boolean;
 }
 
-// NOTE: Hair style IDs must match filenames in public/assets/avatars/hair/*.png
+// NOTE: Hair style IDs must match folder names in lpc/hair/
 export const HAIR_STYLES: HairStyleOption[] = [
   // Short styles
   { id: 'pixie', displayName: 'Pixie', hasBackLayer: false },
   { id: 'bedhead', displayName: 'Bedhead', hasBackLayer: false },
   { id: 'bob', displayName: 'Bob', hasBackLayer: false },
   { id: 'cowlick', displayName: 'Cowlick', hasBackLayer: false },
-  { id: 'short', displayName: 'Short', hasBackLayer: false },
   { id: 'spiked', displayName: 'Spiked', hasBackLayer: false },
-  { id: 'mohawk', displayName: 'Mohawk', hasBackLayer: false },
+  { id: 'shorthawk', displayName: 'Mohawk', hasBackLayer: false },
+  { id: 'buzzcut', displayName: 'Buzzcut', hasBackLayer: false },
+  { id: 'flat_top_fade', displayName: 'Flat Top', hasBackLayer: false },
 
   // Medium styles
   { id: 'bangs', displayName: 'Bangs', hasBackLayer: false },
-  { id: 'bangs_long', displayName: 'Long Bangs', hasBackLayer: false },
+  { id: 'bangslong', displayName: 'Long Bangs', hasBackLayer: false },
   { id: 'parted', displayName: 'Parted', hasBackLayer: false },
   { id: 'swoop', displayName: 'Swoop', hasBackLayer: false },
-  { id: 'curly', displayName: 'Curly', hasBackLayer: false },
+  { id: 'curly_short', displayName: 'Curly', hasBackLayer: false },
   { id: 'ponytail', displayName: 'Ponytail', hasBackLayer: false },
   { id: 'ponytail2', displayName: 'Ponytail Alt', hasBackLayer: false },
   { id: 'braid', displayName: 'Braid', hasBackLayer: false },
   { id: 'idol', displayName: 'Idol', hasBackLayer: false },
   { id: 'shoulderl', displayName: 'Shoulder Left', hasBackLayer: false },
   { id: 'shoulderr', displayName: 'Shoulder Right', hasBackLayer: false },
+  { id: 'messy', displayName: 'Messy', hasBackLayer: false },
+  { id: 'page', displayName: 'Page', hasBackLayer: false },
 
   // Long styles
   { id: 'long', displayName: 'Long', hasBackLayer: false },
@@ -101,17 +105,23 @@ export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'princess', displayName: 'Princess', hasBackLayer: false },
   { id: 'high_ponytail', displayName: 'High Ponytail', hasBackLayer: false },
   { id: 'pigtails', displayName: 'Pigtails', hasBackLayer: false },
+  { id: 'xlong', displayName: 'Extra Long', hasBackLayer: false },
+  { id: 'half_up', displayName: 'Half Up', hasBackLayer: false },
 
   // Textured
   { id: 'afro', displayName: 'Afro', hasBackLayer: false },
   { id: 'dreadlocks_long', displayName: 'Dreadlocks', hasBackLayer: false },
+  { id: 'dreadlocks_short', displayName: 'Short Dreads', hasBackLayer: false },
+  { id: 'cornrows', displayName: 'Cornrows', hasBackLayer: false },
+  { id: 'natural', displayName: 'Natural', hasBackLayer: false },
 
   // Special
   { id: 'bald', displayName: 'Bald', hasBackLayer: false },
+  { id: 'balding', displayName: 'Balding', hasBackLayer: false },
 ];
 
 // ============================================================================
-// Clothing - Tops
+// Clothing - Tops (from lpc/torso/*)
 // ============================================================================
 
 export interface ClothingTopOption {
@@ -131,7 +141,7 @@ export const TOPS: ClothingTopOption[] = [
 ];
 
 // ============================================================================
-// Clothing - Bottoms
+// Clothing - Bottoms (from lpc/legs/*)
 // ============================================================================
 
 export interface ClothingBottomOption {
@@ -151,7 +161,7 @@ export const BOTTOMS: ClothingBottomOption[] = [
 ];
 
 // ============================================================================
-// Shoes
+// Shoes (from lpc/feet/*)
 // ============================================================================
 
 export interface ShoesOption {
@@ -181,13 +191,13 @@ export interface AccessoryOption {
 }
 
 export const ACCESSORIES: AccessoryOption[] = [
-  // Glasses
+  // Glasses (from lpc/facial/glasses/*)
   { id: 'glasses', displayName: 'Glasses', category: 'glasses' },
   { id: 'glasses_round', displayName: 'Round Glasses', category: 'glasses' },
   { id: 'glasses_nerd', displayName: 'Nerd Glasses', category: 'glasses' },
   { id: 'sunglasses', displayName: 'Sunglasses', category: 'glasses' },
   { id: 'shades', displayName: 'Shades', category: 'glasses' },
-  // Hats
+  // Hats (from lpc/hat/*)
   { id: 'hat_bandana', displayName: 'Bandana', category: 'hat' },
   { id: 'hat_hood', displayName: 'Hood', category: 'hat' },
   { id: 'hat_tophat', displayName: 'Top Hat', category: 'hat' },
@@ -195,7 +205,7 @@ export const ACCESSORIES: AccessoryOption[] = [
 ];
 
 // ============================================================================
-// Beards
+// Beards (from lpc/beards/*)
 // ============================================================================
 
 export interface BeardOption {
@@ -213,7 +223,7 @@ export const BEARDS: BeardOption[] = [
 ];
 
 // ============================================================================
-// Eyes
+// Eyes (from lpc/eyes/*)
 // ============================================================================
 
 export interface EyeColorOption {

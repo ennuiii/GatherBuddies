@@ -14,6 +14,7 @@ import { avatarAssetLoader, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT, LPC_COLS, LPC_ROW
 // Layer rendering order (bottom to top)
 const LAYER_ORDER = [
   'body',
+  'face',
   'bottom',
   'shoes',
   'top',
@@ -80,54 +81,64 @@ class AvatarCompositorService {
 
   /**
    * Build layer configuration from avatar config
+   * Keys must match format used in AvatarAssetLoader (with bodyType suffix for body-specific assets)
    */
   private buildLayers(config: AvatarConfig): Map<LayerName, LayerConfig> {
+    console.log('[AvatarCompositor] Building layers for body type:', config.body.type);
     const layers = new Map<LayerName, LayerConfig>();
+    const DEFAULT_COLOR = 'white';
+    const DEFAULT_HAIR_COLOR = 'black';
+    const bodyType = config.body.type;
 
-    // Body
+    // Body - key format: body_{skinTone}_{bodyType}
     layers.set('body', {
-      textureKey: `body_${config.body.type}_${config.body.skinTone}`,
+      textureKey: `body_${config.body.skinTone}_${bodyType}`,
       // Note: Body sprites are pre-colored per skin tone, no tint needed
     });
 
-    // Bottom (pants/skirt)
+    // Face - key format: face_{skinTone}_{bodyType}
+    layers.set('face', {
+      textureKey: `face_${config.body.skinTone}_${bodyType}`,
+    });
+
+    // Bottom (pants/skirt) - key format: bottom_{type}_{color}_{bodyType}
     layers.set('bottom', {
-      textureKey: `bottom_${config.clothing.bottom}`,
+      textureKey: `bottom_${config.clothing.bottom}_${DEFAULT_COLOR}_${bodyType}`,
       tint: this.hexToInt(config.clothing.bottomColor),
     });
 
-    // Shoes
+    // Shoes - key format: shoes_{type}_{color}_{bodyType}
     layers.set('shoes', {
-      textureKey: `shoes_${config.clothing.shoes}`,
+      textureKey: `shoes_${config.clothing.shoes}_${DEFAULT_COLOR}_${bodyType}`,
       tint: this.hexToInt(config.clothing.shoesColor),
     });
 
-    // Top (shirt/jacket)
+    // Top (shirt/jacket) - key format: top_{type}_{color}_{bodyType}
     layers.set('top', {
-      textureKey: `top_${config.clothing.top}`,
+      textureKey: `top_${config.clothing.top}_${DEFAULT_COLOR}_${bodyType}`,
       tint: this.hexToInt(config.clothing.topColor),
     });
 
-    // Hair
+    // Hair - key format: hair_{style}_{color}_{bodyType}
     if (config.hair.style !== 'bald') {
       const hairInfo = HAIR_STYLES.find(h => h.id === config.hair.style);
 
       // Back layer for some hair styles
       if (hairInfo?.hasBackLayer) {
         layers.set('hair_back', {
-          textureKey: `hair_${config.hair.style}_back`,
+          textureKey: `hair_${config.hair.style}_back_${DEFAULT_HAIR_COLOR}_${bodyType}`,
           tint: this.hexToInt(config.hair.color),
         });
       }
 
       // Front layer (main hair)
       layers.set('hair_front', {
-        textureKey: `hair_${config.hair.style}`,
+        textureKey: `hair_${config.hair.style}_${DEFAULT_HAIR_COLOR}_${bodyType}`,
         tint: this.hexToInt(config.hair.color),
       });
     }
 
-    // Accessories (simplified - just use first one for now)
+    // Accessories (not body-type-specific)
     if (config.accessories.length > 0) {
       const acc = config.accessories[0];
       layers.set('accessories', {
@@ -135,6 +146,12 @@ class AvatarCompositorService {
         tint: acc.color ? this.hexToInt(acc.color) : undefined,
       });
     }
+
+    // Log all layers for debugging
+    console.log('[AvatarCompositor] Built layers:');
+    layers.forEach((layer, name) => {
+      console.log(`  - ${name}: ${layer.textureKey}${layer.tint ? ` (tint: 0x${layer.tint.toString(16)})` : ''}`);
+    });
 
     return layers;
   }
@@ -234,28 +251,48 @@ class AvatarCompositorService {
    * Returns the texture key to use
    */
   async composeAvatar(config: AvatarConfig): Promise<string> {
+    console.log('[AvatarCompositor] Starting composition with config:', JSON.stringify(config, null, 2));
+
     if (!this.scene) {
+      console.error('[AvatarCompositor] Not initialized - scene is null');
       throw new Error('[AvatarCompositor] Not initialized');
     }
 
     const cacheKey = this.generateCacheKey(config);
+    console.log('[AvatarCompositor] Cache key:', cacheKey);
 
     // Check cache
     const cached = this.cache.get(cacheKey);
     if (cached) {
+      console.log('[AvatarCompositor] Using cached texture:', cached.textureKey);
       cached.timestamp = Date.now();
       return cached.textureKey;
     }
 
     // Ensure all assets are loaded
-    const requiredKeys = await avatarAssetLoader.loadForConfig(config);
+    console.log('[AvatarCompositor] Loading assets for config...');
+    let requiredKeys: string[];
+    try {
+      requiredKeys = await avatarAssetLoader.loadForConfig(config);
+      console.log('[AvatarCompositor] Required asset keys:', requiredKeys);
+    } catch (loadError) {
+      console.error('[AvatarCompositor] Failed to load assets:', loadError);
+      throw loadError;
+    }
 
     // Verify all required assets are actually loaded
-    const missingAssets = requiredKeys.filter(key => !avatarAssetLoader.isLoaded(key));
+    const bodyType = config.body.type;
+    const missingAssets = requiredKeys.filter(key => !avatarAssetLoader.isLoaded(key, bodyType));
     if (missingAssets.length > 0) {
-      console.error('[AvatarCompositor] Missing required assets:', missingAssets);
+      console.error('[AvatarCompositor] Missing required assets after loading:', missingAssets);
+      console.error('[AvatarCompositor] Body type:', bodyType);
+      // Log which assets ARE loaded for debugging
+      const loadedAssets = requiredKeys.filter(key => avatarAssetLoader.isLoaded(key, bodyType));
+      console.log('[AvatarCompositor] Successfully loaded assets:', loadedAssets);
       throw new Error(`Failed to load avatar assets: ${missingAssets.join(', ')}`);
     }
+
+    console.log('[AvatarCompositor] All assets loaded successfully');
 
     // Build layer configuration
     const layers = this.buildLayers(config);
@@ -370,61 +407,87 @@ class AvatarCompositorService {
 
   /**
    * Create animations for a composed avatar texture
+   *
+   * LPC Extended Format Row Layout:
+   * - Walk: rows 8-11 (up, left, down, right) - 9 frames
+   * - Idle: rows 22-25 (up, left, down, right) - 2 frames (0-1)
+   * - Run: rows 34-37 (up, left, down, right) - 8 frames
+   * - Sit: rows 30-33 (up, left, down, right) - 3 frames (0-2)
    */
   createAnimations(textureKey: string): void {
     if (!this.scene) return;
 
-    // Animation frame mappings for LPC Universal format
-    // Row 8-11 are walking animations (down, left, right, up)
-    const directions = ['down', 'left', 'right', 'up'];
-    const walkStartRows = [10, 9, 11, 8]; // LPC row order: up, left, down, right
+    // Direction mappings (LPC order: up, left, down, right within each animation group)
+    const directions = ['down', 'left', 'right', 'up'] as const;
+
+    // Row mappings per direction (index matches directions array)
+    const walkRows = [10, 9, 11, 8]; // walk-down=10, walk-left=9, walk-right=11, walk-up=8
+    const idleRows = [24, 23, 25, 22]; // idle-down=24, idle-left=23, idle-right=25, idle-up=22
+    const runRows = [36, 35, 37, 34]; // run-down=36, run-left=35, run-right=37, run-up=34
+    const sitRows = [32, 31, 33, 30]; // sit-down=32, sit-left=31, sit-right=33, sit-up=30
 
     directions.forEach((dir, index) => {
-      const row = walkStartRows[index];
+      const walkRow = walkRows[index];
+      const idleRow = idleRows[index];
+      const runRow = runRows[index];
+      const sitRow = sitRows[index];
 
-      // Walk animation (9 frames)
-      const walkKey = `${textureKey}_run_${dir}`;
+      // Walk animation (9 frames, used for slower movement)
+      const walkKey = `${textureKey}_walk_${dir}`;
       if (!this.scene!.anims.exists(walkKey)) {
         this.scene!.anims.create({
           key: walkKey,
           frames: this.scene!.anims.generateFrameNumbers(textureKey, {
-            start: row * LPC_COLS,
-            end: row * LPC_COLS + 8,
+            start: walkRow * LPC_COLS,
+            end: walkRow * LPC_COLS + 8,
+          }),
+          frameRate: 12,
+          repeat: -1,
+        });
+      }
+
+      // Run animation (8 frames, used for faster movement)
+      const runKey = `${textureKey}_run_${dir}`;
+      if (!this.scene!.anims.exists(runKey)) {
+        this.scene!.anims.create({
+          key: runKey,
+          frames: this.scene!.anims.generateFrameNumbers(textureKey, {
+            start: runRow * LPC_COLS,
+            end: runRow * LPC_COLS + 7,
           }),
           frameRate: 15,
           repeat: -1,
         });
       }
 
-      // Idle animation (use first frame of walk)
+      // Idle animation (2 frames from dedicated idle rows)
       const idleKey = `${textureKey}_idle_${dir}`;
       if (!this.scene!.anims.exists(idleKey)) {
         this.scene!.anims.create({
           key: idleKey,
           frames: this.scene!.anims.generateFrameNumbers(textureKey, {
-            start: row * LPC_COLS,
-            end: row * LPC_COLS,
+            start: idleRow * LPC_COLS,
+            end: idleRow * LPC_COLS + 1,
           }),
-          frameRate: 1,
+          frameRate: 2, // Slow idle animation
           repeat: -1,
         });
       }
-    });
 
-    // Sitting animations (if available in sheet - simplified for now)
-    // Uses first frame of down walk as sitting placeholder
-    const sitKey = `${textureKey}_sit_down`;
-    if (!this.scene.anims.exists(sitKey)) {
-      this.scene.anims.create({
-        key: sitKey,
-        frames: this.scene.anims.generateFrameNumbers(textureKey, {
-          start: 10 * LPC_COLS,
-          end: 10 * LPC_COLS,
-        }),
-        frameRate: 1,
-        repeat: 0,
-      });
-    }
+      // Sit animation (3 frames)
+      const sitKey = `${textureKey}_sit_${dir}`;
+      if (!this.scene!.anims.exists(sitKey)) {
+        this.scene!.anims.create({
+          key: sitKey,
+          frames: this.scene!.anims.generateFrameNumbers(textureKey, {
+            start: sitRow * LPC_COLS,
+            end: sitRow * LPC_COLS + 2,
+          }),
+          frameRate: 4,
+          repeat: 0,
+        });
+      }
+    });
 
     console.log(`[AvatarCompositor] Created animations for: ${textureKey}`);
   }

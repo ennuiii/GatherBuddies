@@ -30,7 +30,7 @@ export type SkinTone = 'light' | 'olive' | 'bronze' | 'brown' | 'amber' | 'taupe
 // Hair options (matching lpc/hair/* folder names)
 export type HairStyle =
   // Short styles
-  | 'pixie' | 'bedhead' | 'bob' | 'cowlick' | 'spiked' | 'mohawk' | 'buzzcut' | 'flat_top_fade'
+  | 'pixie' | 'bedhead' | 'bob' | 'cowlick' | 'spiked' | 'shorthawk' | 'buzzcut' | 'flat_top_fade'
   // Medium styles
   | 'bangs' | 'bangslong' | 'parted' | 'swoop' | 'curly_short' | 'ponytail' | 'ponytail2'
   | 'braid' | 'idol' | 'shoulderl' | 'shoulderr' | 'messy' | 'page'
