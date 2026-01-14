@@ -42,8 +42,20 @@ export type HairStyle =
   // Special
   | 'balding';
 
-// Clothing options (filtered to only items with extended 46-row animations: walk, idle, sit, run)
-export type ClothingTop = 'none' | 'tshirt'; // 'none' = no top
+// Clothing options
+// Extended animations items have proper idle/sit/run/walk animations (46 rows)
+// Basic items use walk animation as fallback for other animations (21 rows)
+export type ClothingTop =
+  | 'none'              // No top
+  // Extended animations (46 rows - proper idle/sit/run/walk)
+  | 'tshirt'            // female, teen
+  | 'shortsleeve_polo'  // male, female, teen - ONLY top with male + extended animations
+  | 'longsleeve2'       // female, teen
+  | 'sleeveless2'       // female, teen
+  // Basic animations (21 rows - walk fallback for other animations)
+  | 'longsleeve'        // male, female, teen
+  | 'shortsleeve'       // male, female, teen
+  | 'sleeveless';       // male, female
 export type ClothingBottom = 'pants' | 'shorts' | 'leggings' | 'pantaloons';
 export type Shoes = 'none' | 'shoes2' | 'boots2'; // 'none' = barefoot
 
