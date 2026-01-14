@@ -181,7 +181,13 @@ class AvatarCompositorService {
   ): void {
     // Create temporary canvas for tinting
     const tempCanvas = new OffscreenCanvas(width, height);
-    const tempCtx = tempCanvas.getContext('2d')!;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) {
+      // Can't apply tint, just draw source directly
+      console.warn('[AvatarCompositor] Failed to create tint canvas, drawing without tint');
+      ctx.drawImage(sourceCanvas, 0, 0);
+      return;
+    }
 
     // Draw source
     tempCtx.drawImage(sourceCanvas, 0, 0);
@@ -258,8 +264,9 @@ class AvatarCompositorService {
       }
 
       const source = texture.getSourceImage() as HTMLImageElement;
-      if (!source || !source.complete) {
-        // Skip incomplete textures silently
+      if (!source || !source.complete || source.naturalWidth === 0 || source.naturalHeight === 0) {
+        // Skip incomplete or invalid textures silently
+        console.warn(`[AvatarCompositor] Skipping invalid texture source for ${layer.textureKey}`);
         continue;
       }
 
@@ -278,18 +285,27 @@ class AvatarCompositorService {
 
       if (layer.tint) {
         // Create temp canvas for this frame
-        const frameCanvas = new OffscreenCanvas(LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT);
-        const frameCtx = frameCanvas.getContext('2d')!;
+        const tintFrameCanvas = new OffscreenCanvas(LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT);
+        const tintFrameCtx = tintFrameCanvas.getContext('2d');
+        if (!tintFrameCtx) {
+          // Can't apply tint, draw directly without tint
+          ctx.drawImage(
+            source,
+            srcX, srcY, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT,
+            0, 0, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT
+          );
+          continue;
+        }
 
         // Draw frame from source
-        frameCtx.drawImage(
+        tintFrameCtx.drawImage(
           source,
           srcX, srcY, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT,
           0, 0, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT
         );
 
         // Apply tint and draw to main canvas
-        this.applyTint(ctx, frameCanvas, layer.tint, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT);
+        this.applyTint(ctx, tintFrameCanvas, layer.tint, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT);
       } else {
         // Draw directly without tint
         ctx.drawImage(
@@ -352,11 +368,17 @@ class AvatarCompositorService {
     const sheetWidth = LPC_COLS * LPC_FRAME_WIDTH;
     const sheetHeight = LPC_ROWS * LPC_FRAME_HEIGHT;
     const sheetCanvas = new OffscreenCanvas(sheetWidth, sheetHeight);
-    const sheetCtx = sheetCanvas.getContext('2d')!;
+    const sheetCtx = sheetCanvas.getContext('2d');
+    if (!sheetCtx) {
+      throw new Error('[AvatarCompositor] Failed to create sheet canvas context (memory pressure?)');
+    }
 
     // Frame composition canvas
     const frameCanvas = new OffscreenCanvas(LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT);
-    const frameCtx = frameCanvas.getContext('2d')!;
+    const frameCtx = frameCanvas.getContext('2d');
+    if (!frameCtx) {
+      throw new Error('[AvatarCompositor] Failed to create frame canvas context (memory pressure?)');
+    }
 
     // Compose each frame
     for (let row = 0; row < LPC_ROWS; row++) {
@@ -380,7 +402,10 @@ class AvatarCompositorService {
     const displayWidth = LPC_COLS * DISPLAY_FRAME_WIDTH;
     const displayHeight = LPC_ROWS * DISPLAY_FRAME_HEIGHT;
     const displayCanvas = new OffscreenCanvas(displayWidth, displayHeight);
-    const displayCtx = displayCanvas.getContext('2d')!;
+    const displayCtx = displayCanvas.getContext('2d');
+    if (!displayCtx) {
+      throw new Error('[AvatarCompositor] Failed to create display canvas context (memory pressure?)');
+    }
 
     // Use high quality scaling
     displayCtx.imageSmoothingEnabled = true;
@@ -399,7 +424,10 @@ class AvatarCompositorService {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = displayWidth;
     tempCanvas.height = displayHeight;
-    const tempCtx = tempCanvas.getContext('2d')!;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) {
+      throw new Error('[AvatarCompositor] Failed to create HTML canvas context');
+    }
     tempCtx.drawImage(displayCanvas, 0, 0);
 
     // Convert to data URL and load as Image

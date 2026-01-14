@@ -1062,9 +1062,14 @@ export default class AvatarEditorScene extends Phaser.Scene {
         loadingText.setColor('#ff6666');
         loadingText.setVisible(true);
       }
+      // Stop any animation on the preview sprite to avoid showing broken frames
+      if (this.previewSprite.anims.isPlaying) {
+        this.previewSprite.anims.stop();
+      }
+    } finally {
+      // Always clear isComposing flag, even on error
+      this.isComposing = false;
     }
-
-    this.isComposing = false;
 
     // If there's a pending config, process it now
     if (this.pendingConfig) {

@@ -105,6 +105,7 @@ class AvatarAssetLoaderService {
   private scene: Phaser.Scene | null = null;
   private loadedAssets: Set<string> = new Set();
   private loadingPromises: Map<string, Promise<void>> = new Map();
+  private failedAssets: Set<string> = new Set(); // Track assets that failed to load
 
   /**
    * Initialize with a Phaser scene
@@ -156,8 +157,14 @@ class AvatarAssetLoaderService {
     const textureKey = this.getTextureKey(key, bodyType);
     const cacheKey = textureKey;
 
+    // Skip if already loaded
     if (this.loadedAssets.has(cacheKey)) {
       return textureKey;
+    }
+
+    // Skip if previously failed (avoid retrying broken assets)
+    if (this.failedAssets.has(cacheKey)) {
+      throw new Error(`Asset previously failed to load: ${textureKey}`);
     }
 
     const existing = this.loadingPromises.get(cacheKey);
@@ -190,6 +197,7 @@ class AvatarAssetLoaderService {
           this.scene!.load.off('filecomplete', onComplete);
           this.scene!.load.off('loaderror', onError);
           this.loadingPromises.delete(cacheKey);
+          this.failedAssets.add(cacheKey); // Mark as failed to avoid retrying
           console.error(`[AvatarAssetLoader] Failed to load: ${textureKey} from ${assetPath}`);
           reject(new Error(`Failed to load asset: ${textureKey}`));
         }
@@ -520,14 +528,24 @@ class AvatarAssetLoaderService {
 
   /**
    * Get the Phaser texture for an asset key
+   * Returns null if texture doesn't exist or is the "__MISSING" placeholder
    */
   getTexture(key: string): Phaser.Textures.Texture | null {
     if (!this.scene) {
       return null;
     }
-    // Try to get texture regardless of loaded status (Phaser may have it)
+    // Check if texture actually exists before getting it
+    // Phaser's textures.get() returns "__MISSING" texture instead of null
+    if (!this.scene.textures.exists(key)) {
+      return null;
+    }
     try {
-      return this.scene.textures.get(key);
+      const texture = this.scene.textures.get(key);
+      // Double-check it's not the missing texture placeholder
+      if (texture.key === '__MISSING') {
+        return null;
+      }
+      return texture;
     } catch {
       return null;
     }
@@ -539,6 +557,7 @@ class AvatarAssetLoaderService {
   dispose(): void {
     this.loadedAssets.clear();
     this.loadingPromises.clear();
+    this.failedAssets.clear();
     this.scene = null;
   }
 }
