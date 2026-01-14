@@ -3,14 +3,17 @@
  *
  * React wrapper for the Phaser game instance.
  * Connects to Colyseus on mount and passes room to Phaser via registry.
+ * Includes avatar customization UI.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import Phaser from 'phaser';
-import { Bootstrap, Game } from '../../game/scenes';
+import { Bootstrap, Game, AvatarEditorScene } from '../../game/scenes';
 import { colyseusService } from '../../services/colyseusService';
 import GameLaunchDialog from './GameLaunchDialog';
 import GameInviteNotification from './GameInviteNotification';
+import AvatarEditor from '../ui/AvatarEditor';
+import { useAvatar } from '../../hooks/useAvatar';
 
 interface PhaserGameProps {
   roomCode: string;
@@ -24,6 +27,9 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
   const containerRef = useRef<HTMLDivElement>(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Avatar customization
+  const { avatarConfig, isEditorOpen, closeEditor, saveAvatar } = useAvatar();
 
   console.log('[PhaserGame] Render - roomCode:', roomCode, 'playerName:', playerName);
 
@@ -54,7 +60,7 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
             debug: false,
           },
         },
-        scene: [Bootstrap, Game],
+        scene: [Bootstrap, Game, AvatarEditorScene],
         scale: {
           mode: Phaser.Scale.RESIZE,
           autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -135,6 +141,12 @@ export function PhaserGame({ roomCode, playerName, onReady, onError }: PhaserGam
       )}
       <GameLaunchDialog playerName={playerName} />
       <GameInviteNotification playerName={playerName} />
+      <AvatarEditor
+        isOpen={isEditorOpen}
+        onClose={closeEditor}
+        currentConfig={avatarConfig}
+        onSave={saveAvatar}
+      />
     </div>
   );
 }
