@@ -26,6 +26,8 @@ key-files:
     - GameBuddiesHub/client/src/types/avatar.ts
     - GameBuddiesHub/client/src/services/AvatarManifest.ts
     - GameBuddiesHub/client/src/services/AvatarAssetLoader.ts
+    - GameBuddiesHub/client/src/services/AvatarCompositor.ts
+    - GameBuddiesHub/client/src/game/scenes/AvatarEditorScene.ts
 
 key-decisions:
   - "Basic animation tops use walk as fallback for idle/sit/run"
@@ -71,6 +73,7 @@ Each task was committed atomically:
 3. **Task 3: Update SHOES array** - `937d2ad2` (feat)
 4. **Bug fix: Top asset path mappings** - `8b40400f` (fix) - deviation fix
 5. **Bug fix: Bottom and shoes path mappings** - `eee45128` (fix) - deviation fix
+6. **Bug fix: Intermittent preview failures** - `c38e08ae` (fix) - deviation fix
 
 **Plan metadata:** `8bc12282` (docs: complete plan)
 
@@ -107,10 +110,27 @@ Each task was committed atomically:
 - **Verification:** TypeScript compiles, paths resolve correctly
 - **Committed in:** `eee45128`
 
+**3. [Rule 1 - Bug] Fixed intermittent avatar preview failures**
+- **Found during:** User testing (preview "sometimes breaks")
+- **Root causes identified:**
+  - `getTexture()` returned Phaser's "__MISSING" placeholder texture instead of null
+  - OffscreenCanvas `getContext('2d')` can fail under memory pressure
+  - Failed assets were being repeatedly retried
+  - Source image validation missed invalid states
+- **Fix:**
+  - Check `textures.exists()` before `get()` and verify key isn't "__MISSING"
+  - Add null checks for all canvas context creation with graceful fallbacks
+  - Track failed assets in `failedAssets` set to avoid retry loops
+  - Validate `naturalWidth/naturalHeight` on source images
+  - Use `finally{}` for flag cleanup, stop animation on error
+- **Files modified:** AvatarAssetLoader.ts, AvatarCompositor.ts, AvatarEditorScene.ts
+- **Verification:** TypeScript compiles
+- **Committed in:** `c38e08ae`
+
 ---
 
-**Total deviations:** 2 auto-fixed (bugs)
-**Impact on plan:** Essential for correct asset loading. No scope creep.
+**Total deviations:** 3 auto-fixed (bugs)
+**Impact on plan:** Essential for reliable preview. No scope creep.
 
 ## Issues Encountered
 
