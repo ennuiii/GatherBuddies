@@ -161,6 +161,11 @@ export default class Game extends Phaser.Scene {
     }
     this.room = room;
 
+    // Re-initialize avatar services with this scene
+    // (Bootstrap scene that originally initialized them is no longer active)
+    avatarAssetLoader.initialize(this);
+    avatarCompositor.initialize(this);
+
     // Create character animations
     createCharacterAnims(this.anims);
 

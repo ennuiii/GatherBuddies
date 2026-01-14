@@ -17,6 +17,7 @@ import type { AvatarConfig, BodyType, SkinTone, HairStyle, ClothingTop, Clothing
 import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar';
 import { getAvailableOptions, type AvatarManifest } from '../../services/AvatarManifest';
 import { avatarCompositor } from '../../services/AvatarCompositor';
+import { avatarAssetLoader } from '../../services/AvatarAssetLoader';
 
 // UI Constants
 const PANEL_WIDTH = 700;
@@ -92,6 +93,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
   }
 
   create() {
+    // Re-initialize avatar services with this scene
+    // (Bootstrap scene that originally initialized them is no longer active)
+    avatarAssetLoader.initialize(this);
+    avatarCompositor.initialize(this);
+
     const { width, height } = this.scale;
     const centerX = width / 2;
     const centerY = height / 2;
