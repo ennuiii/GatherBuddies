@@ -68,6 +68,34 @@ export default class OtherPlayer extends Player {
     if (player.anim) this.anims.play(player.anim, true);
   }
 
+  /**
+   * Update the player's texture (for avatar composition).
+   * Swaps to new texture and updates current animation.
+   */
+  updateTexture(textureKey: string) {
+    // Get current animation direction
+    const currentAnim = this.anims.currentAnim?.key;
+    let direction = 'down';
+
+    if (currentAnim) {
+      // Parse direction from animation key (e.g., "adam_idle_down" -> "down")
+      const parts = currentAnim.split('_');
+      if (parts.length >= 3) {
+        direction = parts[parts.length - 1];
+      }
+    }
+
+    // Update texture reference
+    this.playerTexture = textureKey;
+    this.setTexture(textureKey);
+
+    // Play idle animation with new texture
+    const newAnim = `${textureKey}_idle_${direction}`;
+    if (this.scene.anims.exists(newAnim)) {
+      this.anims.play(newAnim, true);
+    }
+  }
+
   destroy(fromScene?: boolean) {
     this.playerContainer.destroy();
     super.destroy(fromScene);
@@ -106,12 +134,20 @@ export default class OtherPlayer extends Player {
     this.disconnectBufferTime = 0;
   }
 
-  checkProximityConnection(mySessionId: string): boolean {
-    if (
-      !this.connected &&
-      this.readyToConnect &&
-      mySessionId > this.playerId
-    ) {
+  /**
+   * Check if we should trigger a conversation with this player.
+   * No longer uses session ID comparison - server handles deduplication.
+   * Both players can now send START_CONVERSATION independently.
+   */
+  checkProximityConnection(): boolean {
+    console.log(`[OtherPlayer] checkProximityConnection:`, {
+      playerId: this.playerId.slice(0, 8),
+      connected: this.connected,
+      readyToConnect: this.readyToConnect,
+      result: !this.connected && this.readyToConnect
+    });
+
+    if (!this.connected && this.readyToConnect) {
       this.connected = true;
       phaserEvents.emit('proximity:connect', { playerId: this.playerId });
       return true;

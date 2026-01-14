@@ -24,6 +24,11 @@ import { phaserEvents } from '../events/EventCenter';
 import ArcadeCabinet from '../items/ArcadeCabinet';
 import Chair from '../items/Chair';
 import PlayerSelector from '../items/PlayerSelector';
+import { calculateDistanceInTiles, PROXIMITY } from '../../config/proximityConfig';
+import type { AvatarConfig } from '../../types/avatar';
+import { avatarStorage } from '../../services/AvatarStorage';
+import { avatarCompositor } from '../../services/AvatarCompositor';
+import { avatarAssetLoader } from '../../services/AvatarAssetLoader';
 
 interface NavKeys {
   up: Phaser.Input.Keyboard.Key;
@@ -42,6 +47,7 @@ interface PlayerState {
   x: number;
   y: number;
   anim: string;
+  character?: string; // Legacy key or JSON avatar config
 }
 
 // Character info for selection UI
@@ -65,6 +71,9 @@ export default class Game extends Phaser.Scene {
   myPlayer!: MyPlayer;
   private otherPlayers!: Phaser.Physics.Arcade.Group;
   private otherPlayerMap = new Map<string, OtherPlayer>();
+  // Track recently removed players to prevent ghost players from race conditions
+  // (onChange can fire after onRemove, causing players to reappear)
+  private recentlyRemovedPlayers = new Map<string, number>(); // sessionId -> removal timestamp
   private playerName: string = 'Player';
   private overlappingPlayers: Set<string> = new Set();
   private currentFrameOverlaps: Set<string> = new Set();
@@ -83,6 +92,10 @@ export default class Game extends Phaser.Scene {
   private selectionIndex: number = 0;
   private selectionCards: Phaser.GameObjects.Container[] = [];
   private pendingPlayerData: { player: PlayerState; sessionId: string } | null = null;
+
+  // Avatar customization state
+  private avatarConfig: AvatarConfig | null = null;
+  private useAvatarSystem: boolean = false;
 
   // Debug mode for positioning objects
   private debugMode: boolean = false;
@@ -103,6 +116,13 @@ export default class Game extends Phaser.Scene {
     this.selectionIndex = 0;
     this.selectedCharacter = 'adam';
     this.pendingPlayerData = null;
+
+    // Check if avatar system is available (assets loaded)
+    this.useAvatarSystem = avatarAssetLoader.isInitialized();
+    console.log('[Game] Avatar system available:', this.useAvatarSystem);
+
+    // Load saved avatar config
+    this.avatarConfig = avatarStorage.load();
   }
 
   registerKeys() {
@@ -198,7 +218,42 @@ export default class Game extends Phaser.Scene {
     // Listen for dialog state changes to pause/resume game input
     phaserEvents.on('dialog:opened', () => { this.dialogOpen = true; });
     phaserEvents.on('dialog:closed', () => { this.dialogOpen = false; });
+
+    // Listen for avatar selection from React AvatarEditor
+    phaserEvents.on('avatar:selectionComplete', this.handleAvatarSelected, this);
+    phaserEvents.on('avatar:updated', this.handleAvatarUpdated, this);
   }
+
+  // Handle avatar selection from React UI
+  private handleAvatarSelected = async (config: AvatarConfig) => {
+    console.log('[Game] Avatar selected:', config);
+    this.avatarConfig = config;
+
+    // If we have pending player data and were waiting for selection, spawn now
+    if (this.pendingPlayerData && !this.characterSelected) {
+      this.characterSelected = true;
+
+      // Remove keyboard listeners for selection
+      this.input.keyboard!.off('keydown-LEFT', this.selectPreviousCharacter, this);
+      this.input.keyboard!.off('keydown-RIGHT', this.selectNextCharacter, this);
+      this.input.keyboard!.off('keydown-ENTER', this.confirmCharacterSelection, this);
+      this.input.keyboard!.off('keydown-SPACE', this.confirmCharacterSelection, this);
+
+      // Destroy character selection UI if it exists
+      if (this.characterSelectContainer) {
+        this.characterSelectContainer.destroy();
+      }
+
+      await this.spawnWithAvatar();
+    }
+  };
+
+  // Handle avatar update (for future live preview)
+  private handleAvatarUpdated = (config: AvatarConfig) => {
+    console.log('[Game] Avatar updated:', config);
+    this.avatarConfig = config;
+    // TODO: Update existing player sprite if already spawned
+  };
 
   private setupColyseusListeners() {
     const state = this.room.state as any;
@@ -288,15 +343,30 @@ export default class Game extends Phaser.Scene {
   }
 
   private handlePlayerJoined(newPlayer: PlayerState, id: string) {
-    console.log('[Game] Creating OtherPlayer:', id, newPlayer.name);
+    console.log('[Game] Creating OtherPlayer:', id, newPlayer.name, 'character:', newPlayer.character?.slice(0, 30));
 
     // Don't create if already exists
     if (this.otherPlayerMap.has(id)) {
       return;
     }
 
-    // TODO: Get character from player state when server tracks selection
-    const otherCharacter = 'adam';
+    // Get character from player state
+    // Check if it's a JSON avatar config or legacy character key
+    let otherCharacter = 'adam'; // Default fallback
+    let avatarConfigJson: string | null = null;
+
+    if (newPlayer.character) {
+      if (newPlayer.character.startsWith('{')) {
+        // JSON avatar config - store for async composition
+        avatarConfigJson = newPlayer.character;
+        // Use fallback initially, will swap texture after composition
+        otherCharacter = 'adam';
+      } else {
+        // Legacy character key
+        otherCharacter = newPlayer.character;
+      }
+    }
+
     const otherPlayer = this.add.otherPlayer(
       newPlayer.x || 705,
       newPlayer.y || 500,
@@ -306,10 +376,46 @@ export default class Game extends Phaser.Scene {
     );
     this.otherPlayers.add(otherPlayer);
     this.otherPlayerMap.set(id, otherPlayer);
+
+    // If player has avatar config, compose texture asynchronously and swap
+    if (avatarConfigJson) {
+      this.composeOtherPlayerAvatar(otherPlayer, avatarConfigJson);
+    }
+  }
+
+  /**
+   * Compose avatar texture for another player and swap their sprite texture.
+   * Runs asynchronously - player is visible with fallback texture while loading.
+   */
+  private async composeOtherPlayerAvatar(otherPlayer: OtherPlayer, configJson: string) {
+    try {
+      const config: AvatarConfig = JSON.parse(configJson);
+      console.log('[Game] Composing avatar for OtherPlayer:', otherPlayer.playerId.slice(0, 8));
+
+      // Compose the avatar texture
+      const textureKey = await avatarCompositor.composeAvatar(config);
+      avatarCompositor.createAnimations(textureKey);
+
+      // Swap texture on the player sprite
+      otherPlayer.updateTexture(textureKey);
+      console.log('[Game] OtherPlayer texture swapped to:', textureKey);
+    } catch (error) {
+      console.error('[Game] Failed to compose avatar for OtherPlayer:', error);
+      // Keep using fallback texture (adam)
+    }
   }
 
   private handlePlayerLeft(id: string) {
     console.log('[Game] Removing player:', id);
+
+    // Track removal time to ignore late onChange callbacks (prevents ghost players)
+    this.recentlyRemovedPlayers.set(id, Date.now());
+
+    // Clean up the tracking entry after 5 seconds
+    setTimeout(() => {
+      this.recentlyRemovedPlayers.delete(id);
+    }, 5000);
+
     if (this.otherPlayerMap.has(id)) {
       const otherPlayer = this.otherPlayerMap.get(id);
       if (otherPlayer) {
@@ -317,6 +423,10 @@ export default class Game extends Phaser.Scene {
         this.otherPlayerMap.delete(id);
       }
     }
+
+    // Also clean up any overlap tracking
+    this.overlappingPlayers.delete(id);
+    this.currentFrameOverlaps.delete(id);
   }
 
   private handlePlayerUpdated(id: string, player: PlayerState) {
@@ -324,8 +434,21 @@ export default class Game extends Phaser.Scene {
     if (otherPlayer) {
       otherPlayer.updateFromState(player);
     } else if (player.name) {
-      // If we don't have this player yet, add them
-      this.handlePlayerJoined(player, id);
+      // Check if this player was recently removed (prevents ghost players from race conditions)
+      if (this.recentlyRemovedPlayers.has(id)) {
+        console.log('[Game] Ignoring update for recently removed player:', id);
+        return;
+      }
+
+      // Before adding, verify the player is still in the server state
+      // (onChange can fire after onRemove, causing ghost players)
+      const state = this.room.state as any;
+      if (state.players?.has(id)) {
+        // If we don't have this player yet, add them
+        this.handlePlayerJoined(player, id);
+      } else {
+        console.log('[Game] Ignoring update for removed player:', id);
+      }
     }
   }
 
@@ -381,12 +504,32 @@ export default class Game extends Phaser.Scene {
     }).setOrigin(0.5);
     this.characterSelectContainer.add(instructions);
 
-    // Confirm button - positioned below instructions
+    // Button row
     const btnY = cardBottomY + 60;
-    const btnBg = this.add.rectangle(width / 2, btnY, 180, 45, 0x4caf50, 1)
+
+    // Customize Avatar button (opens React modal)
+    const customizeBtnBg = this.add.rectangle(width / 2 - 100, btnY, 180, 45, 0x6366f1, 1)
+      .setStrokeStyle(2, 0x818cf8)
+      .setInteractive({ useHandCursor: true });
+    const customizeBtnText = this.add.text(width / 2 - 100, btnY, 'Customize Avatar', {
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    customizeBtnBg.on('pointerdown', () => {
+      console.log('[Game] Customize Avatar clicked - opening editor');
+      phaserEvents.emit('avatar:openEditor');
+    });
+    customizeBtnBg.on('pointerover', () => customizeBtnBg.setFillStyle(0x818cf8));
+    customizeBtnBg.on('pointerout', () => customizeBtnBg.setFillStyle(0x6366f1));
+    this.characterSelectContainer.add([customizeBtnBg, customizeBtnText]);
+
+    // Confirm button - positioned to the right
+    const btnBg = this.add.rectangle(width / 2 + 100, btnY, 180, 45, 0x4caf50, 1)
       .setStrokeStyle(2, 0x66bb6a)
       .setInteractive({ useHandCursor: true });
-    const btnText = this.add.text(width / 2, btnY, 'Start Game', {
+    const btnText = this.add.text(width / 2 + 100, btnY, 'Start Game', {
       fontSize: '18px',
       fontFamily: 'Arial, sans-serif',
       color: '#ffffff',
@@ -538,6 +681,9 @@ export default class Game extends Phaser.Scene {
     // Send initial name to server
     this.room.send(1, { name: this.playerName }); // HubMessage.UPDATE_PLAYER_NAME = 1
 
+    // Send character selection to server (legacy key)
+    this.room.send(6, { character: this.selectedCharacter }); // HubMessage.UPDATE_CHARACTER = 6
+
     // Add collisions with ground
     const groundLayer = this.map.getLayer('Ground')?.tilemapLayer;
     if (groundLayer) {
@@ -578,6 +724,97 @@ export default class Game extends Phaser.Scene {
     );
 
     console.log('[Game] MyPlayer created at', spawnX, spawnY, 'with character', this.selectedCharacter);
+    this.pendingPlayerData = null;
+  }
+
+  /**
+   * Spawn player with custom avatar (using avatar compositor)
+   * Falls back to legacy character if composition fails
+   */
+  private async spawnWithAvatar() {
+    if (!this.pendingPlayerData || !this.avatarConfig) {
+      console.log('[Game] Cannot spawn - missing data');
+      this.spawnLocalPlayer(); // Fallback to legacy
+      return;
+    }
+
+    const { player, sessionId } = this.pendingPlayerData;
+    const spawnX = player.x || 705;
+    const spawnY = player.y || 500;
+
+    try {
+      // Try to compose avatar texture
+      console.log('[Game] Composing avatar texture...');
+      const textureKey = await avatarCompositor.composeAvatar(this.avatarConfig);
+      avatarCompositor.createAnimations(textureKey);
+
+      // Create player with composed texture
+      this.myPlayer = this.add.myPlayer(spawnX, spawnY, textureKey, sessionId);
+      this.myPlayer.setPlayerName(this.playerName);
+      console.log('[Game] MyPlayer created with custom avatar:', textureKey);
+    } catch (error) {
+      console.error('[Game] Failed to compose avatar, falling back to legacy:', error);
+      // Fallback to default legacy character
+      this.selectedCharacter = 'adam';
+      this.myPlayer = this.add.myPlayer(spawnX, spawnY, this.selectedCharacter, sessionId);
+      this.myPlayer.setPlayerName(this.playerName);
+    }
+
+    // Set camera to follow player
+    this.cameras.main.startFollow(this.myPlayer, true);
+
+    // Set up movement callback
+    this.myPlayer.onMovementUpdate = (data: { x: number; y: number; anim: string }) => {
+      this.room.send(0, data); // HubMessage.UPDATE_PLAYER = 0
+    };
+
+    // Send initial name to server
+    this.room.send(1, { name: this.playerName }); // HubMessage.UPDATE_PLAYER_NAME = 1
+
+    // Send avatar config to server (JSON serialized for sync to other players)
+    if (this.avatarConfig) {
+      this.room.send(6, { character: JSON.stringify(this.avatarConfig) }); // HubMessage.UPDATE_CHARACTER = 6
+    }
+
+    // Add collisions with ground
+    const groundLayer = this.map.getLayer('Ground')?.tilemapLayer;
+    if (groundLayer) {
+      this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], groundLayer);
+    }
+
+    // Add collisions with all stored collidable object groups
+    this.collidableGroups.forEach(group => {
+      this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], group);
+    });
+
+    // Add chair overlap detection
+    this.physics.add.overlap(
+      this.playerSelector,
+      this.chairGroup,
+      this.handleChairOverlap,
+      undefined,
+      this
+    );
+
+    // Add arcade cabinet overlap detection
+    this.physics.add.overlap(
+      this.playerSelector,
+      this.cabinetGroup,
+      this.handleCabinetOverlap,
+      undefined,
+      this
+    );
+
+    // Add proximity detection overlap
+    this.physics.add.overlap(
+      this.myPlayer,
+      this.otherPlayers,
+      this.handlePlayersOverlap,
+      undefined,
+      this
+    );
+
+    console.log('[Game] MyPlayer created at', spawnX, spawnY, 'with avatar');
     this.pendingPlayerData = null;
   }
 
@@ -791,40 +1028,10 @@ export default class Game extends Phaser.Scene {
     _myPlayer: Phaser.Types.Physics.Arcade.GameObjectWithBody,
     otherPlayer: Phaser.Types.Physics.Arcade.GameObjectWithBody
   ) {
+    // Physics overlap is now only used for cabinet interaction detection
+    // Conversation detection uses distance-based check in update() loop
     const other = otherPlayer as OtherPlayer;
     this.currentFrameOverlaps.add(other.playerId);
-
-    // Reset disconnect buffer since we're overlapping
-    other.resetDisconnectBuffer();
-
-    // If not yet connected, update proximity buffer (need 750ms of overlap)
-    if (!other.connected) {
-      // Update proximity buffer while overlapping (this accumulates time)
-      other.updateProximityBuffer(this.game.loop.delta);
-
-      // checkProximityConnection will return true when buffer reaches 750ms and we should initiate
-      const shouldConnect = other.checkProximityConnection(this.room.sessionId);
-      if (shouldConnect) {
-        console.log('[Game] Proximity threshold reached for', other.playerId);
-        this.overlappingPlayers.add(other.playerId);
-
-        // Check if I'm already in a conversation before starting a new one
-        const state = this.room.state as any;
-        const myPlayer = state.players?.get(this.room.sessionId);
-        console.log('[Game] My conversationId:', myPlayer?.conversationId);
-        console.log('[Game] My sessionId:', this.room.sessionId);
-        console.log('[Game] Other playerId:', other.playerId);
-
-        if (!myPlayer?.conversationId) {
-          // Send START_CONVERSATION to Colyseus server (Message.START_CONVERSATION = 4)
-          console.log('[Game] Sending START_CONVERSATION to server...');
-          this.room.send(4, { targetSessionId: other.playerId });
-          console.log('[Game] Sent START_CONVERSATION for', other.playerId);
-        } else {
-          console.log('[Game] Already in conversation, not sending START_CONVERSATION');
-        }
-      }
-    }
   }
 
   private drawConversationIndicators(): void {
@@ -836,9 +1043,14 @@ export default class Game extends Phaser.Scene {
 
     const conversations = new Map<string, { players: Array<{ x: number; y: number }>; locked: boolean }>();
 
+    // Debug: Count players with conversations
+    let playersWithConversation = 0;
+
     // Group players by conversationId
-    state.players.forEach((player: any, sessionId: string) => {
+    state.players.forEach((player: any, _sessionId: string) => {
       if (!player.conversationId) return;
+
+      playersWithConversation++;
 
       let conv = conversations.get(player.conversationId);
       if (!conv) {
@@ -856,8 +1068,18 @@ export default class Game extends Phaser.Scene {
       }
     });
 
+    // Debug log every 5 seconds (to avoid spam)
+    if (Date.now() % 5000 < 100) {
+      console.log('[Game] Conversation state:', {
+        totalPlayers: state.players.size,
+        playersWithConversation,
+        conversationsCount: conversations.size,
+        stateConversationsCount: state.conversations?.size || 0
+      });
+    }
+
     // Draw indicator for each conversation
-    conversations.forEach((conv, convId) => {
+    conversations.forEach((conv, _convId) => {
       if (conv.players.length < 2) return;
 
       // Calculate center
@@ -927,8 +1149,53 @@ export default class Game extends Phaser.Scene {
       }
     }
 
-    // Check for disconnections - players who were overlapping but aren't now
-    // Note: currentFrameOverlaps is populated by handlePlayersOverlap during physics step
+    // Distance-based conversation detection (replaces physics overlap requirement)
+    // Check distance to each player and trigger conversation when close enough for 750ms
+    if (this.myPlayer) {
+      const myX = this.myPlayer.x;
+      const myY = this.myPlayer.y;
+      const state = this.room.state as any;
+      const myPlayerState = state.players?.get(this.room.sessionId);
+      const myConversationId = myPlayerState?.conversationId || '';
+
+      this.otherPlayerMap.forEach((otherPlayer, sessionId) => {
+        const distance = calculateDistanceInTiles(myX, myY, otherPlayer.x, otherPlayer.y);
+        const isCloseEnough = distance <= PROXIMITY.CONVERSATION_START;
+
+        // Debug: Log distance periodically (every 5 seconds)
+        if (t % 5000 < 100 && distance < 10) {
+          console.log(`[Game] 📏 Distance to ${sessionId.slice(0, 8)}: ${distance.toFixed(1)} tiles (threshold: ${PROXIMITY.CONVERSATION_START}), isClose: ${isCloseEnough}, connected: ${otherPlayer.connected}`);
+        }
+
+        if (isCloseEnough) {
+          // Mark as in proximity for this frame
+          this.currentFrameOverlaps.add(sessionId);
+          otherPlayer.resetDisconnectBuffer();
+
+          // If not yet connected, accumulate time
+          if (!otherPlayer.connected) {
+            otherPlayer.updateProximityBuffer(dt);
+            const shouldConnect = otherPlayer.checkProximityConnection();
+
+            if (shouldConnect) {
+              console.log('[Game] ✅ Distance threshold reached for', sessionId, 'distance:', distance.toFixed(1), 'tiles');
+              this.overlappingPlayers.add(sessionId);
+
+              // Only start conversation if not already in one
+              if (!myConversationId) {
+                console.log('[Game] 📤 Sending START_CONVERSATION to server...');
+                this.room.send(4, { targetSessionId: sessionId });
+                console.log('[Game] ✅ Sent START_CONVERSATION for', sessionId);
+              } else {
+                console.log('[Game] Already in conversation:', myConversationId);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Check for disconnections - players who were close but aren't now
     this.otherPlayerMap.forEach((player, id) => {
       if (this.overlappingPlayers.has(id) && !this.currentFrameOverlaps.has(id)) {
         // Player was in conversation but walked away - start disconnect timer
@@ -944,7 +1211,7 @@ export default class Game extends Phaser.Scene {
           console.log('[Game] Sent LEAVE_CONVERSATION');
         }
       } else if (!this.currentFrameOverlaps.has(id) && !this.overlappingPlayers.has(id)) {
-        // Not overlapping and never connected - reset proximity buffer
+        // Not close and never connected - reset proximity buffer
         // (they need to stay near each other for 750ms to connect)
         player.resetProximityBuffer();
       }
