@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-01-14)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** v1.1 Avatar Customization — Phase 5 (Avatar Editor UI)
+**Current focus:** v1.1 Avatar Customization — Complete, ready for milestone completion
 
 ## Current Position
 
-Phase: 5 of 6 (Avatar Editor UI)
+Phase: 6 of 6 (First-Join & Persistence)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-01-14 — Completed 05-01-PLAN.md
+Last activity: 2026-01-14 — Completed 06-01-PLAN.md
 
-Progress: ██████░░░░ 67% (2 of 3 phases complete)
+Progress: ██████████ 100% (3 of 3 phases complete)
 
 ## v1.1 Scope
 
 **Milestone Goal:** Replace preset avatars with full LPC-based customization system
 
 **Phases:**
-- Phase 4: LPC Asset Integration - Load and composite avatar layers
-- Phase 5: Avatar Editor UI - Phaser-based customization scene
-- Phase 6: First-Join & Persistence - Force customization, save/load, sync
+- Phase 4: LPC Asset Integration - Load and composite avatar layers ✓
+- Phase 5: Avatar Editor UI - Phaser-based customization scene ✓
+- Phase 6: First-Join & Persistence - Force customization, save/load, sync ✓
 
 **Constraints:**
 - Use LPC assets already in public/assets/avatars/
@@ -39,17 +39,20 @@ Progress: ██████░░░░ 67% (2 of 3 phases complete)
 | 4 | AvatarManifest as source of truth | Centralizes all avatar options, avatar.ts re-exports for compatibility |
 | 5 | C key for editor (not E) | E already used for chair/cabinet interactions |
 | 5 | Scene overlay pattern | Editor launches as overlay to preserve game state |
+| 6 | Force editor on first join | Players must customize or quick-start, no auto-spawn |
+| 6 | Quick Start option | Users who want to play immediately can skip customization |
+| 6 | Config migration | Old saved avatars automatically upgraded to new format |
 
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: Phase 5 complete
-Resume: Ready for Phase 6 planning with /gsd:plan-phase 6
+Stopped at: Phase 6 complete, v1.1 milestone ready
+Resume: Run /gsd:complete-milestone to archive v1.1
 
 ## Roadmap Evolution
 
 - v1.0 MVP shipped: 2026-01-14 (Phases 1-3, 13 plans)
-- v1.1 Avatar Customization created: 2026-01-14 (Phases 4-6)
+- v1.1 Avatar Customization complete: 2026-01-14 (Phases 4-6, 3 plans)
 
 ## Architecture
 

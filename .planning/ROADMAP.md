@@ -7,7 +7,7 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 ## Milestones
 
 - ✅ [v1.0 MVP](milestones/v1.0-ROADMAP.md) (Phases 1-3) - SHIPPED 2026-01-14
-- 🚧 **v1.1 Avatar Customization** - Phases 4-6 (in progress)
+- 🚧 **v1.1 Avatar Customization** - Phases 4-6 (ready for completion)
 
 ## Completed Milestones
 
@@ -45,15 +45,15 @@ Plans:
 Plans:
 - [x] 05-01: AvatarEditorScene with tabs, live preview, and game integration
 
-#### Phase 6: First-Join & Persistence
+#### Phase 6: First-Join & Persistence ✓
 
 **Goal**: Force customization on first join, save/load from localStorage, sync to Colyseus server
 **Depends on**: Phase 5
 **Research**: Unlikely (localStorage + Colyseus sync, internal patterns)
-**Plans**: TBD
+**Status**: Complete (2026-01-14)
 
 Plans:
-- [ ] 06-01: TBD (run /gsd:plan-phase 6 to break down)
+- [x] 06-01: Verify and document existing first-join, localStorage, and Colyseus sync implementation
 
 ## Progress
 
@@ -65,7 +65,7 @@ Plans:
 | 3. Game Integration | v1.0 | 2/2 | Complete | 2026-01-14 |
 | 4. LPC Asset Integration | v1.1 | 1/1 | Complete | 2026-01-14 |
 | 5. Avatar Editor UI | v1.1 | 1/1 | Complete | 2026-01-14 |
-| 6. First-Join & Persistence | v1.1 | 0/? | Not started | - |
+| 6. First-Join & Persistence | v1.1 | 1/1 | Complete | 2026-01-14 |
 
 ## Notes
 
