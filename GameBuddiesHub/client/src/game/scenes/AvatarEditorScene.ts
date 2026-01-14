@@ -71,6 +71,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
   // Tab buttons for highlighting
   private tabButtons: Map<CategoryId, Phaser.GameObjects.Rectangle> = new Map();
 
+  // Direction cycling for preview
+  private previewDirection: number = 0;
+  private readonly DIRECTIONS = ['down', 'left', 'right', 'up'];
+  private directionTimer?: Phaser.Time.TimerEvent;
+
   constructor() {
     super('avatarEditor');
   }
@@ -556,12 +561,12 @@ export default class AvatarEditorScene extends Phaser.Scene {
 
   private createPreviewPanel() {
     // Preview background
-    const previewBg = this.add.rectangle(0, 0, 180, 220, 0x252535, 1);
+    const previewBg = this.add.rectangle(0, 0, 180, 250, 0x252535, 1);
     previewBg.setStrokeStyle(2, 0x3d3d5c);
     this.previewContainer.add(previewBg);
 
     // Preview label
-    const previewLabel = this.add.text(0, -100, 'Preview', {
+    const previewLabel = this.add.text(0, -115, 'Preview', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
       color: '#888888',
@@ -569,18 +574,67 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.previewContainer.add(previewLabel);
 
     // Placeholder sprite (will be replaced after composition)
-    this.previewSprite = this.add.sprite(0, 10, 'adam', 18);
+    this.previewSprite = this.add.sprite(0, -10, 'adam', 18);
     this.previewSprite.setScale(3); // 3x scale for visibility
     this.previewContainer.add(this.previewSprite);
 
+    // Rotate button to cycle through directions
+    const rotateBtnBg = this.add.rectangle(0, 75, 100, 30, 0x3d3d5c, 1);
+    rotateBtnBg.setStrokeStyle(1, 0x5d5d7c);
+    rotateBtnBg.setInteractive({ useHandCursor: true });
+    rotateBtnBg.on('pointerdown', () => this.cycleDirection());
+    rotateBtnBg.on('pointerover', () => rotateBtnBg.setFillStyle(0x4d4d6c));
+    rotateBtnBg.on('pointerout', () => rotateBtnBg.setFillStyle(0x3d3d5c));
+
+    const rotateBtnText = this.add.text(0, 75, 'Rotate', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#aaaaaa',
+    }).setOrigin(0.5);
+
+    this.previewContainer.add([rotateBtnBg, rotateBtnText]);
+
     // Loading indicator (hidden by default)
-    const loadingText = this.add.text(0, 80, 'Loading...', {
+    const loadingText = this.add.text(0, 105, 'Loading...', {
       fontSize: '12px',
       fontFamily: 'Arial, sans-serif',
       color: '#666666',
     }).setOrigin(0.5).setVisible(false);
     loadingText.setName('loadingText');
     this.previewContainer.add(loadingText);
+
+    // Start direction cycling timer (cycles every 2 seconds)
+    this.startDirectionCycling();
+  }
+
+  private startDirectionCycling() {
+    // Stop existing timer if any
+    if (this.directionTimer) {
+      this.directionTimer.destroy();
+    }
+
+    // Cycle through directions every 2 seconds
+    this.directionTimer = this.time.addEvent({
+      delay: 2000,
+      callback: () => this.cycleDirection(),
+      loop: true,
+    });
+  }
+
+  private cycleDirection() {
+    this.previewDirection = (this.previewDirection + 1) % this.DIRECTIONS.length;
+    this.playPreviewAnimation();
+  }
+
+  private playPreviewAnimation() {
+    if (!this.previewTextureKey) return;
+
+    const dir = this.DIRECTIONS[this.previewDirection];
+    const idleAnim = `${this.previewTextureKey}_idle_${dir}`;
+
+    if (this.anims.exists(idleAnim)) {
+      this.previewSprite.play(idleAnim);
+    }
   }
 
   private createActionButtons() {
@@ -643,11 +697,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
       this.previewSprite.setTexture(textureKey);
       this.previewTextureKey = textureKey;
 
-      // Play idle animation
-      const idleAnim = `${textureKey}_idle_down`;
-      if (this.anims.exists(idleAnim)) {
-        this.previewSprite.play(idleAnim);
-      }
+      // Play idle animation in current direction
+      this.playPreviewAnimation();
 
       console.log('[AvatarEditor] Preview updated:', textureKey);
     } catch (error) {
@@ -696,6 +747,12 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private cleanup() {
     // Remove keyboard listener
     this.input.keyboard!.off('keydown-ESC', this.handleCancel, this);
+
+    // Stop direction cycling timer
+    if (this.directionTimer) {
+      this.directionTimer.destroy();
+      this.directionTimer = undefined;
+    }
 
     // Clear pending composition
     this.pendingConfig = null;
