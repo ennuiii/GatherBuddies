@@ -69,7 +69,8 @@ Each task was committed atomically:
 1. **Task 1: Update avatar.ts types** - `9e674789` (feat)
 2. **Task 2: Expand TOPS array** - `c07c39b1` (feat)
 3. **Task 3: Update SHOES array** - `937d2ad2` (feat)
-4. **Bug fix: Asset path mappings** - `8b40400f` (fix) - deviation fix
+4. **Bug fix: Top asset path mappings** - `8b40400f` (fix) - deviation fix
+5. **Bug fix: Bottom and shoes path mappings** - `eee45128` (fix) - deviation fix
 
 **Plan metadata:** `8bc12282` (docs: complete plan)
 
@@ -90,7 +91,7 @@ Each task was committed atomically:
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Fixed incorrect body type support and missing asset paths**
+**1. [Rule 1 - Bug] Fixed incorrect body type support and missing top asset paths**
 - **Found during:** Post-execution verification (user testing)
 - **Issue:** shortsleeve_polo was marked as supporting male but LPC assets only have female/teen; AvatarAssetLoader missing path mappings for new items
 - **Fix:** Corrected supportedBodyTypes for shortsleeve_polo (female/teen only), added path mappings for shortsleeve_polo, longsleeve2, sleeveless2
@@ -98,9 +99,17 @@ Each task was committed atomically:
 - **Verification:** TypeScript compiles, paths resolve correctly
 - **Committed in:** `8b40400f`
 
+**2. [Rule 1 - Bug] Fixed incorrect bottom and shoes asset paths**
+- **Found during:** Continued user testing
+- **Issue:** pantaloons had extra `/pantaloons/` in path, leggings had extra `/leggings/`, shoes used 'female' folder instead of 'thin'
+- **Fix:** Corrected path patterns to match actual LPC folder structure
+- **Files modified:** AvatarAssetLoader.ts
+- **Verification:** TypeScript compiles, paths resolve correctly
+- **Committed in:** `eee45128`
+
 ---
 
-**Total deviations:** 1 auto-fixed (bug)
+**Total deviations:** 2 auto-fixed (bugs)
 **Impact on plan:** Essential for correct asset loading. No scope creep.
 
 ## Issues Encountered

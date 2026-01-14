@@ -52,14 +52,14 @@ const BODY_TYPE_MAPPINGS = {
     child: 'male', // child uses male paths for hair
     pregnant: 'female',
   },
-  // Shoes: teen/pregnant use female, muscular uses male
+  // Shoes: female/teen/pregnant use 'thin' folder, muscular uses male
   shoes: {
     male: 'male',
-    female: 'female',
+    female: 'thin',
     muscular: 'male',
-    teen: 'female',
+    teen: 'thin',
     child: 'male',
-    pregnant: 'female',
+    pregnant: 'thin',
   },
   // Tops: each body type has its own or maps to similar
   tops: {
@@ -450,8 +450,8 @@ class AvatarAssetLoaderService {
       'jeans': `legs/pants/${mappedBodyType}`,
       'shorts': `legs/shorts/shorts/${mappedBodyType}`,
       'skirt': `legs/skirts/plain/female`,
-      'leggings': `legs/leggings/leggings/female`,
-      'pantaloons': `legs/pantaloons/pantaloons/${mappedBodyType}`,
+      'leggings': `legs/leggings/${mappedBodyType}`,
+      'pantaloons': `legs/pantaloons/${mappedBodyType}`,
       'sweatpants': `legs/pants/${mappedBodyType}`,
     };
 
