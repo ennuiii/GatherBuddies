@@ -634,6 +634,9 @@ export default class Game extends Phaser.Scene {
     const spawnX = player.x || 705;
     const spawnY = player.y || 500;
 
+    let textureKey: string;
+    let compositionSucceeded = false;
+
     try {
       // Re-initialize compositor with Game scene (in case avatar editor had it)
       avatarAssetLoader.initialize(this);
@@ -641,25 +644,34 @@ export default class Game extends Phaser.Scene {
 
       // Try to compose avatar texture
       console.log('[Game] Composing avatar texture...');
-      const textureKey = await avatarCompositor.composeAvatar(this.avatarConfig);
+      textureKey = await avatarCompositor.composeAvatar(this.avatarConfig);
       avatarCompositor.createAnimations(textureKey);
-
-      // Create player with composed texture
-      this.myPlayer = this.add.myPlayer(spawnX, spawnY, textureKey, sessionId);
-      this.myPlayer.setPlayerName(this.playerName);
-      console.log('[Game] MyPlayer created with custom avatar:', textureKey);
+      compositionSucceeded = true;
+      console.log('[Game] Avatar composition successful:', textureKey);
     } catch (error) {
       console.error('[Game] Failed to compose avatar:', error);
-      // Create player with placeholder texture - better than crashing
-      const placeholderKey = '__avatar_error_placeholder__';
-      if (!this.textures.exists(placeholderKey)) {
-        const graphics = this.make.graphics({ add: false });
-        graphics.fillStyle(0xff0000, 0.5);
-        graphics.fillRect(0, 0, 32, 48);
-        graphics.generateTexture(placeholderKey, 32, 48);
-        graphics.destroy();
+      // Create player with fallback texture - better than not spawning at all
+      textureKey = this.createFallbackTexture();
+      console.log('[Game] Using fallback texture:', textureKey);
+    }
+
+    // ALWAYS create the player regardless of composition success
+    try {
+      this.myPlayer = this.add.myPlayer(spawnX, spawnY, textureKey, sessionId);
+      this.myPlayer.setPlayerName(this.playerName);
+      console.log('[Game] MyPlayer created at', spawnX, spawnY, compositionSucceeded ? 'with custom avatar' : 'with fallback');
+    } catch (playerError) {
+      console.error('[Game] CRITICAL: Failed to create MyPlayer:', playerError);
+      // Last resort - try with a very basic texture
+      const basicKey = '__basic_placeholder__';
+      if (!this.textures.exists(basicKey)) {
+        const g = this.make.graphics({ add: false });
+        g.fillStyle(0x888888);
+        g.fillRect(0, 0, 32, 48);
+        g.generateTexture(basicKey, 32, 48);
+        g.destroy();
       }
-      this.myPlayer = this.add.myPlayer(spawnX, spawnY, placeholderKey, sessionId);
+      this.myPlayer = this.add.myPlayer(spawnX, spawnY, basicKey, sessionId);
       this.myPlayer.setPlayerName(this.playerName);
     }
 
@@ -717,8 +729,34 @@ export default class Game extends Phaser.Scene {
       this
     );
 
-    console.log('[Game] MyPlayer created at', spawnX, spawnY, 'with avatar');
+    console.log('[Game] MyPlayer spawn complete');
     this.pendingPlayerData = null;
+  }
+
+  /**
+   * Create a simple fallback texture for when avatar composition fails.
+   * This ensures the player can still spawn and play.
+   */
+  private createFallbackTexture(): string {
+    const fallbackKey = '__avatar_fallback__';
+
+    if (!this.textures.exists(fallbackKey)) {
+      // Create a simple colored rectangle as placeholder
+      const graphics = this.make.graphics({ add: false });
+
+      // Draw a simple character silhouette
+      graphics.fillStyle(0x6B7280); // Gray
+      graphics.fillRect(8, 0, 16, 48); // Body
+      graphics.fillStyle(0xFCD34D); // Yellow
+      graphics.fillCircle(16, 8, 8); // Head
+
+      graphics.generateTexture(fallbackKey, 32, 48);
+      graphics.destroy();
+
+      console.log('[Game] Created fallback texture');
+    }
+
+    return fallbackKey;
   }
 
   private addGroupFromTiled(

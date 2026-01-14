@@ -89,6 +89,17 @@ const BODY_TYPE_MAPPINGS = {
   },
 };
 
+/**
+ * Hair styles that use 'adult/' folder instead of 'male/female/' folders.
+ * These styles have gender-neutral assets.
+ */
+const ADULT_ONLY_HAIR_STYLES = new Set([
+  'bob', 'bob_side_part', 'balding', 'bangs_bun', 'buzzcut', 'cornrows', 'cowlick',
+  'curly_short', 'curly_short2', 'dreadlocks_short', 'idol', 'jewfro',
+  'natural', 'page2', 'parted3', 'parted_side_bangs', 'parted_side_bangs2',
+  'shoulderl', 'shoulderr', 'twists_fade', 'twists_straight',
+]);
+
 class AvatarAssetLoaderService {
   private scene: Phaser.Scene | null = null;
   private loadedAssets: Set<string> = new Set();
@@ -317,12 +328,18 @@ class AvatarAssetLoaderService {
       case 'hair': {
         // hair_pixie_black -> hair/pixie/{gender}/black.png
         // hair_flat_top_fade_black -> hair/flat_top_fade/{gender}/black.png
+        // hair_bob_black -> hair/bob/adult/black.png (some styles use 'adult' folder)
         // Style can have underscores, color is always the last segment (single word)
         const color = parts[parts.length - 1] || DEFAULT_HAIR_COLOR;
         const style = parts.slice(1, -1).join('_'); // Everything between 'hair_' and '_color'
-        const gender = BODY_TYPE_MAPPINGS.hair[bodyType] || 'male';
-        console.log(`[AvatarAssetLoader] Hair path: style="${style}", color="${color}", gender="${gender}"`);
-        return `${baseUrl}assets/avatars/lpc/hair/${style}/${gender}/${color}.png`;
+
+        // Some hair styles use 'adult/' folder instead of 'male/female/'
+        const folder = ADULT_ONLY_HAIR_STYLES.has(style)
+          ? 'adult'
+          : (BODY_TYPE_MAPPINGS.hair[bodyType] || 'male');
+
+        console.log(`[AvatarAssetLoader] Hair path: style="${style}", color="${color}", folder="${folder}"`);
+        return `${baseUrl}assets/avatars/lpc/hair/${style}/${folder}/${color}.png`;
       }
 
       case 'eyes': {
