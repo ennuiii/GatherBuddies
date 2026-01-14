@@ -42,7 +42,7 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 | 4. LPC Asset Integration | v1.1 | 1/1 | Complete | 2026-01-14 |
 | 5. Avatar Editor UI | v1.1 | 1/1 | Complete | 2026-01-14 |
 | 6. First-Join & Persistence | v1.1 | 1/1 | Complete | 2026-01-14 |
-| 7. LPC Reference Audit | v1.2 | 0/? | Not started | - |
+| 7. LPC Reference Audit | v1.2 | 0/1 | Planned | - |
 | 8. UI/UX Implementation | v1.2 | 0/? | Not started | - |
 
 ## Notes
@@ -69,11 +69,11 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 
 **Goal**: Compare current AvatarManifest against LPC-Reference folder, identify all valid body/clothing/hair combinations that have required animations (idle, sit, run, walk)
 **Depends on**: v1.1 complete
-**Research**: Unlikely (internal folder structure analysis)
-**Status**: Not started
+**Research**: Complete (07-RESEARCH.md)
+**Status**: Planned
 
 Plans:
-- [ ] 07-01: TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01: Expand AvatarManifest with LPC-Reference clothing items (3 tasks)
 
 #### Phase 8: UI/UX Implementation
 
