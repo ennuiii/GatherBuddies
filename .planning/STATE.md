@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-14)
 ## Current Position
 
 Phase: 4 of 6 (LPC Asset Integration)
-Plan: 04-01 (Asset manifest + OtherPlayer composition + live updates)
-Status: Plan created, ready to execute
-Last activity: 2026-01-14 — Phase 4 plan created
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-01-14 — Completed 04-01-PLAN.md
 
-Progress: ░░░░░░░░░░ 0% (0 of 3 phases complete)
+Progress: ███░░░░░░░ 33% (1 of 3 phases complete)
 
 ## v1.1 Scope
 
@@ -32,13 +32,17 @@ Progress: ░░░░░░░░░░ 0% (0 of 3 phases complete)
 
 ## Key Decisions (v1.1)
 
-None yet.
+| Phase | Decision | Rationale |
+|-------|----------|-----------|
+| 4 | Placeholder-then-swap pattern for OtherPlayer | Prevents blocking player join on async avatar loading |
+| 4 | Event-based character updates | Allows Game.ts to handle async composition without coupling |
+| 4 | AvatarManifest as source of truth | Centralizes all avatar options, avatar.ts re-exports for compatibility |
 
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: Phase 4 plan created
-Resume: Ready to run /gsd:execute-plan .planning/phases/04-lpc-asset-integration/04-01-PLAN.md
+Stopped at: Phase 4 complete
+Resume: Ready for Phase 5 planning with /gsd:plan-phase 5
 
 ## Roadmap Evolution
 

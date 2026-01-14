@@ -25,15 +25,15 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 
 **Milestone Goal:** Replace preset avatars with full LPC-based customization system allowing players to customize body type, clothing, hair, and shoes.
 
-#### Phase 4: LPC Asset Integration
+#### Phase 4: LPC Asset Integration ✓
 
 **Goal**: Load and composite avatar layers (body, clothing, hair, shoes) into animated spritesheets
 **Depends on**: v1.0 complete
 **Research**: Unlikely (assets exist, internal compositing patterns)
-**Plans**: TBD
+**Status**: Complete (2026-01-14)
 
 Plans:
-- [ ] 04-01: Asset manifest + OtherPlayer composition + live updates
+- [x] 04-01: Asset manifest + OtherPlayer composition + live updates
 
 #### Phase 5: Avatar Editor UI
 
@@ -63,7 +63,7 @@ Plans:
 | 1.5. Integration | v1.0 | 3/3 | Complete | 2026-01-12 |
 | 2. Social Features | v1.0 | 6/6 | Complete | 2026-01-13 |
 | 3. Game Integration | v1.0 | 2/2 | Complete | 2026-01-14 |
-| 4. LPC Asset Integration | v1.1 | 0/1 | Planned | - |
+| 4. LPC Asset Integration | v1.1 | 1/1 | Complete | 2026-01-14 |
 | 5. Avatar Editor UI | v1.1 | 0/? | Not started | - |
 | 6. First-Join & Persistence | v1.1 | 0/? | Not started | - |
 
