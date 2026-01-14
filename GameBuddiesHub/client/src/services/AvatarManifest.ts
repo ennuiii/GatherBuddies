@@ -129,13 +129,24 @@ export interface ClothingTopOption {
   supportedBodyTypes: BodyType[];
 }
 
-// NOTE: Only includes tops with extended animations (46 rows: walk, idle, sit, run)
-// Items with only 21 rows (tanktop, sleeveless, longsleeve, hoodie, jacket, dress, suit) are excluded
-// tshirt only exists for female/teen body types with proper animation support
+// NOTE: Two categories of tops based on LPC sprite sheet rows:
+// - Extended animations (46 rows): Have proper idle/sit/run/walk animations
+// - Basic animations (21 rows): Only have walk animation (used as fallback for other animations)
+//
+// Body type support determined by presence in LPC-Reference sheet_definitions layer_1 keys.
+// 'pregnant' is not in BODY_TYPES so omitted from supportedBodyTypes.
 // 'none' is a special option for no top (no torso layer rendered)
 export const TOPS: ClothingTopOption[] = [
   { id: 'none' as ClothingTop, displayName: 'None', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  // Extended animations (46 rows - proper idle/sit/run/walk)
+  { id: 'shortsleeve_polo', displayName: 'Polo Shirt', supportedBodyTypes: ['male', 'female', 'teen'] },
   { id: 'tshirt', displayName: 'T-Shirt', supportedBodyTypes: ['female', 'teen'] },
+  { id: 'longsleeve2', displayName: 'Long Sleeve', supportedBodyTypes: ['female', 'teen'] },
+  { id: 'sleeveless2', displayName: 'Tank Top', supportedBodyTypes: ['female', 'teen'] },
+  // Basic animations (21 rows - use walk fallback for idle/sit/run)
+  { id: 'longsleeve', displayName: 'Long Sleeve (Basic)', supportedBodyTypes: ['male', 'female', 'teen'] },
+  { id: 'shortsleeve', displayName: 'Short Sleeve (Basic)', supportedBodyTypes: ['male', 'female', 'teen'] },
+  { id: 'sleeveless', displayName: 'Sleeveless (Basic)', supportedBodyTypes: ['male', 'female'] },
 ];
 
 // ============================================================================
