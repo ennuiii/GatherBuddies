@@ -20,13 +20,18 @@ import { avatarCompositor } from '../../services/AvatarCompositor';
 import { avatarAssetLoader } from '../../services/AvatarAssetLoader';
 
 // UI Constants
-const PANEL_WIDTH = 700;
-const PANEL_HEIGHT = 520;
+const PANEL_WIDTH = 720;
+const PANEL_HEIGHT = 540;
 const TAB_HEIGHT = 40;
 const PREVIEW_SIZE = 128; // 2x scale for 64px display
 const OPTION_BUTTON_HEIGHT = 32;
 const COLOR_SWATCH_SIZE = 28;
 const PADDING = 16;
+
+// Scrollable area constants
+const OPTIONS_AREA_WIDTH = 450;
+const OPTIONS_AREA_HEIGHT = 340; // Height of visible scrollable area
+const SCROLL_SPEED = 30;
 
 // Category definitions
 type CategoryId = 'body' | 'hair' | 'clothing' | 'accessories';
@@ -56,7 +61,15 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private mainContainer!: Phaser.GameObjects.Container;
   private tabContainer!: Phaser.GameObjects.Container;
   private optionsContainer!: Phaser.GameObjects.Container;
+  private optionsViewport!: Phaser.GameObjects.Container;
   private previewContainer!: Phaser.GameObjects.Container;
+
+  // Scrolling state
+  private scrollY: number = 0;
+  private contentHeight: number = 0;
+  private scrollMask!: Phaser.GameObjects.Graphics;
+  private scrollIndicator!: Phaser.GameObjects.Graphics;
+  private optionsAreaBounds!: { x: number; y: number; width: number; height: number };
 
   // State
   private currentConfig!: AvatarConfig;
@@ -101,6 +114,9 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.pendingConfig = null;
     this.isFirstTime = data.isFirstTime ?? false;
     this.previewTextureKey = '';
+    // Reset scroll state
+    this.scrollY = 0;
+    this.contentHeight = 0;
   }
 
   create() {
@@ -137,9 +153,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
     // Create tab buttons
     this.createTabs();
 
-    // Create options container (left side)
-    this.optionsContainer = this.add.container(-PANEL_WIDTH / 2 + PADDING, -PANEL_HEIGHT / 2 + 80);
-    this.mainContainer.add(this.optionsContainer);
+    // Create scrollable options area (left side)
+    this.createScrollableOptionsArea();
 
     // Create preview container (right side)
     this.previewContainer = this.add.container(PANEL_WIDTH / 2 - 120, -40);
@@ -158,7 +173,122 @@ export default class AvatarEditorScene extends Phaser.Scene {
     // Keyboard shortcut to close (Escape)
     this.input.keyboard!.on('keydown-ESC', this.handleCancel, this);
 
+    // Mouse wheel scrolling
+    this.input.on('wheel', this.handleWheel, this);
+
     console.log('[AvatarEditor] Scene created');
+  }
+
+  /**
+   * Create the scrollable options area with viewport, mask, and scroll indicator
+   */
+  private createScrollableOptionsArea() {
+    const { width, height } = this.scale;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Calculate viewport position (global coordinates for mask)
+    const viewportX = centerX - PANEL_WIDTH / 2 + PADDING;
+    const viewportY = centerY - PANEL_HEIGHT / 2 + 85;
+
+    // Store bounds for hit testing
+    this.optionsAreaBounds = {
+      x: viewportX,
+      y: viewportY,
+      width: OPTIONS_AREA_WIDTH,
+      height: OPTIONS_AREA_HEIGHT,
+    };
+
+    // Options viewport container (positioned in main panel)
+    this.optionsViewport = this.add.container(-PANEL_WIDTH / 2 + PADDING, -PANEL_HEIGHT / 2 + 85);
+    this.mainContainer.add(this.optionsViewport);
+
+    // Background for options area
+    const optionsBg = this.add.rectangle(
+      OPTIONS_AREA_WIDTH / 2,
+      OPTIONS_AREA_HEIGHT / 2,
+      OPTIONS_AREA_WIDTH,
+      OPTIONS_AREA_HEIGHT,
+      0x252535,
+      1
+    );
+    optionsBg.setStrokeStyle(1, 0x3d3d5c);
+    this.optionsViewport.add(optionsBg);
+
+    // Scrollable content container (moves vertically)
+    this.optionsContainer = this.add.container(PADDING, PADDING);
+    this.optionsViewport.add(this.optionsContainer);
+
+    // Create mask for clipping content to viewport
+    this.scrollMask = this.make.graphics({ add: false });
+    this.scrollMask.fillStyle(0xffffff);
+    this.scrollMask.fillRect(viewportX, viewportY, OPTIONS_AREA_WIDTH, OPTIONS_AREA_HEIGHT);
+    const mask = this.scrollMask.createGeometryMask();
+    this.optionsContainer.setMask(mask);
+
+    // Scroll indicator (right side of options area)
+    this.scrollIndicator = this.add.graphics();
+    this.optionsViewport.add(this.scrollIndicator);
+  }
+
+  /**
+   * Handle mouse wheel scrolling
+   */
+  private handleWheel(pointer: Phaser.Input.Pointer, _gameObjects: any[], _dx: number, dy: number) {
+    // Check if pointer is over the options area
+    if (!this.isPointerOverOptionsArea(pointer)) return;
+
+    const maxScroll = Math.max(0, this.contentHeight - OPTIONS_AREA_HEIGHT + PADDING * 2);
+
+    // Update scroll position
+    this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.5, 0, maxScroll);
+
+    // Update content position
+    this.optionsContainer.y = PADDING - this.scrollY;
+
+    // Update scroll indicator
+    this.updateScrollIndicator();
+  }
+
+  /**
+   * Check if pointer is over the options area
+   */
+  private isPointerOverOptionsArea(pointer: Phaser.Input.Pointer): boolean {
+    return (
+      pointer.x >= this.optionsAreaBounds.x &&
+      pointer.x <= this.optionsAreaBounds.x + this.optionsAreaBounds.width &&
+      pointer.y >= this.optionsAreaBounds.y &&
+      pointer.y <= this.optionsAreaBounds.y + this.optionsAreaBounds.height
+    );
+  }
+
+  /**
+   * Update the scroll indicator position and visibility
+   */
+  private updateScrollIndicator() {
+    this.scrollIndicator.clear();
+
+    // Only show if content is taller than viewport
+    if (this.contentHeight <= OPTIONS_AREA_HEIGHT) return;
+
+    const scrollBarWidth = 6;
+    const scrollBarX = OPTIONS_AREA_WIDTH - scrollBarWidth - 4;
+    const scrollBarHeight = OPTIONS_AREA_HEIGHT - 8;
+
+    // Calculate thumb size and position
+    const thumbRatio = OPTIONS_AREA_HEIGHT / this.contentHeight;
+    const thumbHeight = Math.max(30, scrollBarHeight * thumbRatio);
+    const maxScroll = this.contentHeight - OPTIONS_AREA_HEIGHT + PADDING * 2;
+    const scrollRatio = maxScroll > 0 ? this.scrollY / maxScroll : 0;
+    const thumbY = 4 + scrollRatio * (scrollBarHeight - thumbHeight);
+
+    // Draw scroll track (subtle)
+    this.scrollIndicator.fillStyle(0x3d3d5c, 0.3);
+    this.scrollIndicator.fillRoundedRect(scrollBarX, 4, scrollBarWidth, scrollBarHeight, 3);
+
+    // Draw scroll thumb
+    this.scrollIndicator.fillStyle(0x666680, 0.8);
+    this.scrollIndicator.fillRoundedRect(scrollBarX, thumbY, scrollBarWidth, thumbHeight, 3);
   }
 
   private createTabs() {
@@ -226,23 +356,31 @@ export default class AvatarEditorScene extends Phaser.Scene {
     // Clear existing content
     this.optionsContainer.removeAll(true);
 
+    // Reset scroll position
+    this.scrollY = 0;
+    this.optionsContainer.y = PADDING;
+    this.contentHeight = 0;
+
     switch (tabId) {
       case 'body':
-        this.renderBodyOptions();
+        this.contentHeight = this.renderBodyOptions();
         break;
       case 'hair':
-        this.renderHairOptions();
+        this.contentHeight = this.renderHairOptions();
         break;
       case 'clothing':
-        this.renderClothingOptions();
+        this.contentHeight = this.renderClothingOptions();
         break;
       case 'accessories':
-        this.renderAccessoriesOptions();
+        this.contentHeight = this.renderAccessoriesOptions();
         break;
     }
+
+    // Update scroll indicator after content is rendered
+    this.updateScrollIndicator();
   }
 
-  private renderBodyOptions() {
+  private renderBodyOptions(): number {
     let y = 0;
 
     // Body Type section
@@ -254,21 +392,30 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(bodyTypeLabel);
     y += 24;
 
+    // Show body types in 2 columns
+    const cols = 2;
+    const btnWidth = 180;
     this.manifest.bodyTypes.forEach((bodyType, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
       const btn = this.createOptionButton(
-        0, y + index * (OPTION_BUTTON_HEIGHT + 4),
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
         bodyType.displayName,
         this.currentConfig.body.type === bodyType.id,
         () => {
           this.currentConfig.body.type = bodyType.id;
+          // Auto-update clothing selections if they're not valid for new body type
+          this.validateClothingForBodyType(bodyType.id);
           this.showTabContent('body'); // Refresh to update selection
           this.updatePreview();
-        }
+        },
+        btnWidth
       );
       this.optionsContainer.add(btn);
     });
 
-    y += this.manifest.bodyTypes.length * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+    const bodyRows = Math.ceil(this.manifest.bodyTypes.length / cols);
+    y += bodyRows * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
 
     // Skin Tone section
     const skinToneLabel = this.add.text(0, y, 'Skin Tone', {
@@ -288,12 +435,18 @@ export default class AvatarEditorScene extends Phaser.Scene {
         this.currentConfig.body.skinTone = id as SkinTone;
         this.showTabContent('body');
         this.updatePreview();
-      }
+      },
+      10 // swatches per row
     );
     this.optionsContainer.add(swatchContainer);
+
+    const skinRows = Math.ceil(this.manifest.skinTones.length / 10);
+    y += skinRows * (COLOR_SWATCH_SIZE + 4) + PADDING;
+
+    return y;
   }
 
-  private renderHairOptions() {
+  private renderHairOptions(): number {
     let y = 0;
 
     // Hair Style section
@@ -305,8 +458,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(hairStyleLabel);
     y += 24;
 
-    // Create a scrollable area for hair styles (2 columns)
-    const cols = 2;
+    // Hair styles in 3 columns for better layout
+    const cols = 3;
     const btnWidth = 120;
     this.manifest.hairStyles.forEach((hairStyle, index) => {
       const col = index % cols;
@@ -345,15 +498,28 @@ export default class AvatarEditorScene extends Phaser.Scene {
         this.currentConfig.hair.color = color;
         this.showTabContent('hair');
         this.updatePreview();
-      }
+      },
+      10 // swatches per row
     );
     this.optionsContainer.add(hairColorSwatches);
+
+    const colorRows = Math.ceil(this.manifest.hairColors.length / 10);
+    y += colorRows * (COLOR_SWATCH_SIZE + 4) + PADDING;
+
+    return y;
   }
 
-  private renderClothingOptions() {
+  private renderClothingOptions(): number {
     let y = 0;
+    const cols = 3;
+    const btnWidth = 120;
 
-    // Top section
+    // Top section - filter by current body type
+    const currentBodyType = this.currentConfig.body.type;
+    const availableTops = this.manifest.tops.filter(
+      top => top.supportedBodyTypes?.includes(currentBodyType) ?? true
+    );
+
     const topLabel = this.add.text(0, y, 'Top', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
@@ -362,13 +528,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(topLabel);
     y += 24;
 
-    const cols = 3;
-    const btnWidth = 90;
-    this.manifest.tops.forEach((top, index) => {
+    availableTops.forEach((top, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const btn = this.createOptionButton(
-        col * (btnWidth + 4), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
         top.displayName,
         this.currentConfig.clothing.top === top.id,
         () => {
@@ -380,9 +544,17 @@ export default class AvatarEditorScene extends Phaser.Scene {
       );
       this.optionsContainer.add(btn);
     });
-    y += Math.ceil(this.manifest.tops.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + 8;
+    y += Math.ceil(availableTops.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + 8;
 
     // Top color
+    const topColorLabel = this.add.text(0, y, 'Top Color', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#666666',
+    });
+    this.optionsContainer.add(topColorLabel);
+    y += 20;
+
     const topColorSwatches = this.createColorSwatches(
       0, y,
       this.manifest.clothingColors.map(c => ({ id: c, color: c })),
@@ -392,12 +564,16 @@ export default class AvatarEditorScene extends Phaser.Scene {
         this.showTabContent('clothing');
         this.updatePreview();
       },
-      6 // Max per row
+      10 // swatches per row
     );
     this.optionsContainer.add(topColorSwatches);
-    y += Math.ceil(this.manifest.clothingColors.length / 6) * (COLOR_SWATCH_SIZE + 4) + PADDING;
+    y += Math.ceil(this.manifest.clothingColors.length / 10) * (COLOR_SWATCH_SIZE + 4) + PADDING;
 
-    // Bottom section
+    // Bottom section - filter by current body type
+    const availableBottoms = this.manifest.bottoms.filter(
+      bottom => bottom.supportedBodyTypes?.includes(currentBodyType) ?? true
+    );
+
     const bottomLabel = this.add.text(0, y, 'Bottom', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
@@ -406,11 +582,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(bottomLabel);
     y += 24;
 
-    this.manifest.bottoms.forEach((bottom, index) => {
+    availableBottoms.forEach((bottom, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const btn = this.createOptionButton(
-        col * (btnWidth + 4), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
         bottom.displayName,
         this.currentConfig.clothing.bottom === bottom.id,
         () => {
@@ -422,9 +598,17 @@ export default class AvatarEditorScene extends Phaser.Scene {
       );
       this.optionsContainer.add(btn);
     });
-    y += Math.ceil(this.manifest.bottoms.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + 8;
+    y += Math.ceil(availableBottoms.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + 8;
 
     // Bottom color
+    const bottomColorLabel = this.add.text(0, y, 'Bottom Color', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#666666',
+    });
+    this.optionsContainer.add(bottomColorLabel);
+    y += 20;
+
     const bottomColorSwatches = this.createColorSwatches(
       0, y,
       this.manifest.clothingColors.map(c => ({ id: c, color: c })),
@@ -434,12 +618,16 @@ export default class AvatarEditorScene extends Phaser.Scene {
         this.showTabContent('clothing');
         this.updatePreview();
       },
-      6
+      10
     );
     this.optionsContainer.add(bottomColorSwatches);
-    y += Math.ceil(this.manifest.clothingColors.length / 6) * (COLOR_SWATCH_SIZE + 4) + PADDING;
+    y += Math.ceil(this.manifest.clothingColors.length / 10) * (COLOR_SWATCH_SIZE + 4) + PADDING;
 
-    // Shoes section
+    // Shoes section - filter by current body type
+    const availableShoes = this.manifest.shoes.filter(
+      shoe => shoe.supportedBodyTypes?.includes(currentBodyType) ?? true
+    );
+
     const shoesLabel = this.add.text(0, y, 'Shoes', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
@@ -448,11 +636,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(shoesLabel);
     y += 24;
 
-    this.manifest.shoes.forEach((shoe, index) => {
+    availableShoes.forEach((shoe, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
       const btn = this.createOptionButton(
-        col * (btnWidth + 4), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
         shoe.displayName,
         this.currentConfig.clothing.shoes === shoe.id,
         () => {
@@ -464,9 +652,35 @@ export default class AvatarEditorScene extends Phaser.Scene {
       );
       this.optionsContainer.add(btn);
     });
+    y += Math.ceil(availableShoes.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + 8;
+
+    // Shoes color
+    const shoesColorLabel = this.add.text(0, y, 'Shoes Color', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#666666',
+    });
+    this.optionsContainer.add(shoesColorLabel);
+    y += 20;
+
+    const shoesColorSwatches = this.createColorSwatches(
+      0, y,
+      this.manifest.clothingColors.map(c => ({ id: c, color: c })),
+      this.currentConfig.clothing.shoesColor,
+      (color) => {
+        this.currentConfig.clothing.shoesColor = color;
+        this.showTabContent('clothing');
+        this.updatePreview();
+      },
+      10
+    );
+    this.optionsContainer.add(shoesColorSwatches);
+    y += Math.ceil(this.manifest.clothingColors.length / 10) * (COLOR_SWATCH_SIZE + 4) + PADDING;
+
+    return y;
   }
 
-  private renderAccessoriesOptions() {
+  private renderAccessoriesOptions(): number {
     let y = 0;
 
     const accessoriesLabel = this.add.text(0, y, 'Accessories (toggle on/off)', {
@@ -491,10 +705,10 @@ export default class AvatarEditorScene extends Phaser.Scene {
         align: 'left',
       });
       this.optionsContainer.add([comingSoon, description]);
-      return;
+      return y + 150;
     }
 
-    const cols = 2;
+    const cols = 3;
     const btnWidth = 120;
     this.manifest.accessories.forEach((acc, index) => {
       const col = index % cols;
@@ -521,6 +735,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
       );
       this.optionsContainer.add(btn);
     });
+
+    const accRows = Math.ceil(this.manifest.accessories.length / cols);
+    y += accRows * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    return y;
   }
 
   private createOptionButton(
@@ -646,8 +865,7 @@ export default class AvatarEditorScene extends Phaser.Scene {
     loadingText.setName('loadingText');
     this.previewContainer.add(loadingText);
 
-    // Start direction cycling timer (cycles every 2 seconds)
-    this.startDirectionCycling();
+    // Manual rotation only - use "Rotate" button to cycle directions
   }
 
   private startDirectionCycling() {
@@ -882,9 +1100,48 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.scene.stop('avatarEditor');
   }
 
+  /**
+   * Validate and auto-update clothing selections when body type changes.
+   * If current selection is not valid for the new body type, select the first valid option.
+   */
+  private validateClothingForBodyType(newBodyType: BodyType) {
+    // Check and update top
+    const validTops = this.manifest.tops.filter(
+      t => t.supportedBodyTypes?.includes(newBodyType) ?? true
+    );
+    const currentTopValid = validTops.some(t => t.id === this.currentConfig.clothing.top);
+    if (!currentTopValid && validTops.length > 0) {
+      this.currentConfig.clothing.top = validTops[0].id;
+      console.log(`[AvatarEditor] Auto-selected top: ${validTops[0].id} for body type ${newBodyType}`);
+    }
+
+    // Check and update bottom
+    const validBottoms = this.manifest.bottoms.filter(
+      b => b.supportedBodyTypes?.includes(newBodyType) ?? true
+    );
+    const currentBottomValid = validBottoms.some(b => b.id === this.currentConfig.clothing.bottom);
+    if (!currentBottomValid && validBottoms.length > 0) {
+      this.currentConfig.clothing.bottom = validBottoms[0].id;
+      console.log(`[AvatarEditor] Auto-selected bottom: ${validBottoms[0].id} for body type ${newBodyType}`);
+    }
+
+    // Check and update shoes
+    const validShoes = this.manifest.shoes.filter(
+      s => s.supportedBodyTypes?.includes(newBodyType) ?? true
+    );
+    const currentShoesValid = validShoes.some(s => s.id === this.currentConfig.clothing.shoes);
+    if (!currentShoesValid && validShoes.length > 0) {
+      this.currentConfig.clothing.shoes = validShoes[0].id;
+      console.log(`[AvatarEditor] Auto-selected shoes: ${validShoes[0].id} for body type ${newBodyType}`);
+    }
+  }
+
   private cleanup() {
     // Remove keyboard listener
     this.input.keyboard!.off('keydown-ESC', this.handleCancel, this);
+
+    // Remove wheel listener
+    this.input.off('wheel', this.handleWheel, this);
 
     // Stop direction cycling timer
     if (this.directionTimer) {
@@ -896,6 +1153,11 @@ export default class AvatarEditorScene extends Phaser.Scene {
     if (this.debounceTimer) {
       this.debounceTimer.destroy();
       this.debounceTimer = undefined;
+    }
+
+    // Clear mask
+    if (this.scrollMask) {
+      this.scrollMask.destroy();
     }
 
     // Clear pending composition

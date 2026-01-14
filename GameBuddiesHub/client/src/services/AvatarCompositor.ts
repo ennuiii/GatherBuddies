@@ -104,22 +104,31 @@ class AvatarCompositorService {
     });
 
     // Bottom (pants/skirt) - key format: bottom_{type}_{color}_{bodyType}
-    layers.set('bottom', {
-      textureKey: `bottom_${config.clothing.bottom}_${DEFAULT_COLOR}_${bodyType}`,
-      tint: this.hexToInt(config.clothing.bottomColor),
-    });
+    // Skip if 'none' (no bottom layer)
+    if (config.clothing.bottom && config.clothing.bottom !== 'none') {
+      layers.set('bottom', {
+        textureKey: `bottom_${config.clothing.bottom}_${DEFAULT_COLOR}_${bodyType}`,
+        tint: this.hexToInt(config.clothing.bottomColor),
+      });
+    }
 
     // Shoes - key format: shoes_{type}_{color}_{bodyType}
-    layers.set('shoes', {
-      textureKey: `shoes_${config.clothing.shoes}_${DEFAULT_COLOR}_${bodyType}`,
-      tint: this.hexToInt(config.clothing.shoesColor),
-    });
+    // Skip if 'none' (barefoot)
+    if (config.clothing.shoes && config.clothing.shoes !== 'none') {
+      layers.set('shoes', {
+        textureKey: `shoes_${config.clothing.shoes}_${DEFAULT_COLOR}_${bodyType}`,
+        tint: this.hexToInt(config.clothing.shoesColor),
+      });
+    }
 
     // Top (shirt/jacket) - key format: top_{type}_{color}_{bodyType}
-    layers.set('top', {
-      textureKey: `top_${config.clothing.top}_${DEFAULT_COLOR}_${bodyType}`,
-      tint: this.hexToInt(config.clothing.topColor),
-    });
+    // Skip if 'none' (no top)
+    if (config.clothing.top && config.clothing.top !== 'none') {
+      layers.set('top', {
+        textureKey: `top_${config.clothing.top}_${DEFAULT_COLOR}_${bodyType}`,
+        tint: this.hexToInt(config.clothing.topColor),
+      });
+    }
 
     // Hair - key format: hair_{style}_{color}_{bodyType}
     // LPC has pre-colored sprites, so we load the matching color file (no tinting needed)
@@ -244,13 +253,13 @@ class AvatarCompositorService {
 
       const texture = avatarAssetLoader.getTexture(layer.textureKey);
       if (!texture) {
-        console.error(`[AvatarCompositor] Missing texture: ${layer.textureKey}`);
+        // Skip missing textures silently (already warned during load)
         continue;
       }
 
       const source = texture.getSourceImage() as HTMLImageElement;
       if (!source || !source.complete) {
-        console.error(`[AvatarCompositor] Texture not ready: ${layer.textureKey}`);
+        // Skip incomplete textures silently
         continue;
       }
 
@@ -264,10 +273,8 @@ class AvatarCompositorService {
       const actualRow = this.getFallbackRow(row, spriteRows, forceFallback);
       const srcY = actualRow * LPC_FRAME_HEIGHT;
 
-      // Debug: Log when using fallback for sit/idle/run animations
-      if (row !== actualRow) {
-        console.log(`[AvatarCompositor] Layer ${layerName}: row ${row} -> fallback ${actualRow} (sprite has ${spriteRows} rows, forceFallback=${forceFallback})`);
-      }
+      // Debug: Only log fallback on first occurrence per row (reduce spam)
+      // Removed verbose logging - was flooding console
 
       if (layer.tint) {
         // Create temp canvas for this frame
@@ -328,19 +335,15 @@ class AvatarCompositorService {
       throw loadError;
     }
 
-    // Verify all required assets are actually loaded
+    // Check for missing assets - warn but don't fail (some clothing may not exist for all body types)
     const bodyType = config.body.type;
     const missingAssets = requiredKeys.filter(key => !avatarAssetLoader.isLoaded(key, bodyType));
     if (missingAssets.length > 0) {
-      console.error('[AvatarCompositor] Missing required assets after loading:', missingAssets);
-      console.error('[AvatarCompositor] Body type:', bodyType);
-      // Log which assets ARE loaded for debugging
-      const loadedAssets = requiredKeys.filter(key => avatarAssetLoader.isLoaded(key, bodyType));
-      console.log('[AvatarCompositor] Successfully loaded assets:', loadedAssets);
-      throw new Error(`Failed to load avatar assets: ${missingAssets.join(', ')}`);
+      console.warn('[AvatarCompositor] Some assets missing (will skip layers):', missingAssets);
+      // Continue anyway - composeFrame handles missing textures gracefully
+    } else {
+      console.log('[AvatarCompositor] All assets loaded successfully');
     }
-
-    console.log('[AvatarCompositor] All assets loaded successfully');
 
     // Build layer configuration
     const layers = this.buildLayers(config);

@@ -126,12 +126,16 @@ export const HAIR_STYLES: HairStyleOption[] = [
 export interface ClothingTopOption {
   id: ClothingTop;
   displayName: string;
+  supportedBodyTypes: BodyType[];
 }
 
 // NOTE: Only includes tops with extended animations (46 rows: walk, idle, sit, run)
 // Items with only 21 rows (tanktop, sleeveless, longsleeve, hoodie, jacket, dress, suit) are excluded
+// tshirt only exists for female/teen body types with proper animation support
+// 'none' is a special option for no top (no torso layer rendered)
 export const TOPS: ClothingTopOption[] = [
-  { id: 'tshirt', displayName: 'T-Shirt' },
+  { id: 'none' as ClothingTop, displayName: 'None', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'tshirt', displayName: 'T-Shirt', supportedBodyTypes: ['female', 'teen'] },
 ];
 
 // ============================================================================
@@ -141,15 +145,17 @@ export const TOPS: ClothingTopOption[] = [
 export interface ClothingBottomOption {
   id: ClothingBottom;
   displayName: string;
+  supportedBodyTypes: BodyType[];
 }
 
 // NOTE: Only includes bottoms with extended animations (46 rows: walk, idle, sit, run)
 // Items with only 21 rows (skirt) are excluded
+// Leggings only have female assets in LPC
 export const BOTTOMS: ClothingBottomOption[] = [
-  { id: 'pants', displayName: 'Pants' },
-  { id: 'shorts', displayName: 'Shorts' },
-  { id: 'leggings', displayName: 'Leggings' },
-  { id: 'pantaloons', displayName: 'Pantaloons' },
+  { id: 'pants', displayName: 'Pants', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'shorts', displayName: 'Shorts', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'leggings', displayName: 'Leggings', supportedBodyTypes: ['female'] },
+  { id: 'pantaloons', displayName: 'Pantaloons', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
 ];
 
 // ============================================================================
@@ -159,13 +165,17 @@ export const BOTTOMS: ClothingBottomOption[] = [
 export interface ShoesOption {
   id: Shoes;
   displayName: string;
+  supportedBodyTypes: BodyType[];
 }
 
 // NOTE: Only includes shoes with extended animations (46 rows: walk, idle, sit, run)
 // Items with only 21 rows (shoes, boots, sandals, slippers, sneakers, dress_shoes) are excluded
+// shoes2/boots2 only have male folder in LPC - female/teen body types don't have these assets
+// 'none' is a special option for barefoot (no shoe layer rendered)
 export const SHOES: ShoesOption[] = [
-  { id: 'shoes2', displayName: 'Shoes' },
-  { id: 'boots2', displayName: 'Boots' },
+  { id: 'none' as Shoes, displayName: 'Barefoot', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'muscular', 'child'] },
+  { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'muscular', 'child'] },
 ];
 
 // ============================================================================

@@ -281,10 +281,16 @@ class AvatarAssetLoaderService {
       keys.push(`beard_${config.beard.style}_${DEFAULT_HAIR_COLOR}`);
     }
 
-    // Clothing
-    keys.push(`top_${config.clothing.top}_${DEFAULT_COLOR}`);
-    keys.push(`bottom_${config.clothing.bottom}_${DEFAULT_COLOR}`);
-    keys.push(`shoes_${config.clothing.shoes}_${DEFAULT_COLOR}`);
+    // Clothing (skip 'none' options)
+    if (config.clothing.top && config.clothing.top !== 'none') {
+      keys.push(`top_${config.clothing.top}_${DEFAULT_COLOR}`);
+    }
+    if (config.clothing.bottom && config.clothing.bottom !== 'none') {
+      keys.push(`bottom_${config.clothing.bottom}_${DEFAULT_COLOR}`);
+    }
+    if (config.clothing.shoes && config.clothing.shoes !== 'none') {
+      keys.push(`shoes_${config.clothing.shoes}_${DEFAULT_COLOR}`);
+    }
 
     // Accessories
     for (const acc of config.accessories) {

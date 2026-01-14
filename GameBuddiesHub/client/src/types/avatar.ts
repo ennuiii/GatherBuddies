@@ -43,9 +43,9 @@ export type HairStyle =
   | 'balding';
 
 // Clothing options (filtered to only items with extended 46-row animations: walk, idle, sit, run)
-export type ClothingTop = 'tshirt';
+export type ClothingTop = 'none' | 'tshirt'; // 'none' = no top
 export type ClothingBottom = 'pants' | 'shorts' | 'leggings' | 'pantaloons';
-export type Shoes = 'shoes2' | 'boots2';
+export type Shoes = 'none' | 'shoes2' | 'boots2'; // 'none' = barefoot
 
 // Accessory options (glasses and hats)
 export type AccessoryType =
@@ -118,7 +118,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
     color: '#4A3728',
   },
   clothing: {
-    top: 'tshirt',
+    top: 'none', // Male body type doesn't have tshirt with extended animations
     topColor: '#3B82F6',
     bottom: 'pants',
     bottomColor: '#1E3A5F',
