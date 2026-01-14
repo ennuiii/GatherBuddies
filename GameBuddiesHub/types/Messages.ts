@@ -5,6 +5,7 @@ export enum Message {
   SEND_ROOM_DATA = 3,
   START_CONVERSATION = 4,
   LEAVE_CONVERSATION = 5,
+  UPDATE_CHARACTER = 6,
   // Note: 10 = CONVERSATION_UPDATED in GameBuddieGamesServer
   GAME_INVITE = 20,
 }

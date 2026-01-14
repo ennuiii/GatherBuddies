@@ -5,8 +5,9 @@
   "type": "module",
   "description": "GameBuddies Hub - Virtual world client",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "download-assets": "node scripts/download-lpc-assets.js",
+    "dev": "npm run download-assets && vite",
+    "build": "npm run download-assets && tsc -b && vite build",
     "build:cap": "cross-env CAPACITOR=true tsc -b && cross-env CAPACITOR=true vite build",
     "lint": "eslint .",
     "preview": "vite preview",

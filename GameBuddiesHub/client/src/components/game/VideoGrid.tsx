@@ -40,7 +40,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({ maxVideos = 6 }) => {
           key={peerId}
           stream={stream}
           label={peerId.slice(0, 8)}
-          muted={true} // Audio routed through Web Audio API
+          muted={true} // Audio handled by RemoteAudioPlayer component
           mirrored={false}
         />
       ))}

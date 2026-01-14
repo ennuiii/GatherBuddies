@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+tmpclaude-*
+package-lock.json

@@ -5,15 +5,23 @@
  * Shows live preview with real-time composition from LPC layers.
  *
  * Features:
- * - Category tabs: Body, Hair, Clothing, Accessories
+ * - 6 Category tabs: Body, Face, Hair, Clothing, Fantasy, Gear
+ * - Body: body type, skin tone
+ * - Face: head type (creature heads), ears, beards, eye color
+ * - Hair: hair styles, hair color
+ * - Clothing: tops, bottoms, shoes with color swatches
+ * - Fantasy: tails, wings, horns
+ * - Gear: hats/helmets, eyewear (glasses)
  * - Option selection with visual feedback
- * - Color swatches for hair and clothing colors
  * - Live preview sprite with idle animation
  * - Save/Cancel buttons with callback support
  */
 
 import Phaser from 'phaser';
-import type { AvatarConfig, BodyType, SkinTone, HairStyle, ClothingTop, ClothingBottom, Shoes, AccessoryType } from '../../types/avatar';
+import type {
+  AvatarConfig, BodyType, SkinTone, HairStyle, ClothingTop, ClothingBottom, Shoes,
+  HeadType, EarType, TailType, WingType, HornType, HatType, GlassesType, BeardStyle
+} from '../../types/avatar';
 import { DEFAULT_AVATAR_CONFIG } from '../../types/avatar';
 import { getAvailableOptions, type AvatarManifest } from '../../services/AvatarManifest';
 import { avatarCompositor } from '../../services/AvatarCompositor';
@@ -33,8 +41,8 @@ const OPTIONS_AREA_WIDTH = 450;
 const OPTIONS_AREA_HEIGHT = 340; // Height of visible scrollable area
 const SCROLL_SPEED = 30;
 
-// Category definitions
-type CategoryId = 'body' | 'hair' | 'clothing' | 'accessories';
+// Category definitions - expanded with Fantasy options
+type CategoryId = 'body' | 'face' | 'hair' | 'clothing' | 'fantasy' | 'accessories';
 
 interface Category {
   id: CategoryId;
@@ -43,9 +51,11 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   { id: 'body', label: 'Body' },
+  { id: 'face', label: 'Face' },
   { id: 'hair', label: 'Hair' },
   { id: 'clothing', label: 'Clothing' },
-  { id: 'accessories', label: 'Accessories' },
+  { id: 'fantasy', label: 'Fantasy' },
+  { id: 'accessories', label: 'Gear' },
 ];
 
 // Scene data passed when launching
@@ -295,8 +305,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.tabContainer = this.add.container(0, -PANEL_HEIGHT / 2 + 60);
     this.mainContainer.add(this.tabContainer);
 
-    const tabWidth = 100;
-    const tabSpacing = 8;
+    const tabWidth = 80; // Narrower to fit 6 tabs
+    const tabSpacing = 6;
     const totalWidth = CATEGORIES.length * tabWidth + (CATEGORIES.length - 1) * tabSpacing;
     const startX = -totalWidth / 2 + tabWidth / 2;
 
@@ -365,11 +375,17 @@ export default class AvatarEditorScene extends Phaser.Scene {
       case 'body':
         this.contentHeight = this.renderBodyOptions();
         break;
+      case 'face':
+        this.contentHeight = this.renderFaceOptions();
+        break;
       case 'hair':
         this.contentHeight = this.renderHairOptions();
         break;
       case 'clothing':
         this.contentHeight = this.renderClothingOptions();
+        break;
+      case 'fantasy':
+        this.contentHeight = this.renderFantasyOptions();
         break;
       case 'accessories':
         this.contentHeight = this.renderAccessoriesOptions();
@@ -442,6 +458,130 @@ export default class AvatarEditorScene extends Phaser.Scene {
 
     const skinRows = Math.ceil(this.manifest.skinTones.length / 10);
     y += skinRows * (COLOR_SWATCH_SIZE + 4) + PADDING;
+
+    return y;
+  }
+
+  private renderFaceOptions(): number {
+    let y = 0;
+    const cols = 3;
+    const btnWidth = 120;
+
+    // Head Type section (creature heads)
+    const headLabel = this.add.text(0, y, 'Head Type', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(headLabel);
+    y += 24;
+
+    this.manifest.headTypes.forEach((headType, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentHead = this.currentConfig.head?.type || 'human';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        headType.displayName,
+        currentHead === headType.id,
+        () => {
+          if (!this.currentConfig.head) this.currentConfig.head = { type: 'human' };
+          this.currentConfig.head.type = headType.id;
+          this.showTabContent('face');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.headTypes.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    // Ears section
+    const earsLabel = this.add.text(0, y, 'Ears', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(earsLabel);
+    y += 24;
+
+    this.manifest.ears.forEach((ear, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentEar = this.currentConfig.ears?.type || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        ear.displayName,
+        currentEar === ear.id,
+        () => {
+          if (!this.currentConfig.ears) this.currentConfig.ears = { type: 'none' };
+          this.currentConfig.ears.type = ear.id;
+          this.showTabContent('face');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.ears.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    // Beards section
+    const beardLabel = this.add.text(0, y, 'Beard / Mustache', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(beardLabel);
+    y += 24;
+
+    this.manifest.beards.forEach((beard, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentBeard = this.currentConfig.beard?.style || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        beard.displayName,
+        currentBeard === beard.id,
+        () => {
+          if (!this.currentConfig.beard) this.currentConfig.beard = { style: 'none', color: '#4A3728' };
+          this.currentConfig.beard.style = beard.id;
+          this.showTabContent('face');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.beards.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    // Eye Color section
+    const eyeLabel = this.add.text(0, y, 'Eye Color', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(eyeLabel);
+    y += 24;
+
+    this.manifest.eyeColors.forEach((eyeColor, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentEye = this.currentConfig.eyes?.color || 'brown';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        eyeColor.displayName,
+        currentEye === eyeColor.id,
+        () => {
+          if (!this.currentConfig.eyes) this.currentConfig.eyes = { color: 'brown' };
+          this.currentConfig.eyes.color = eyeColor.id;
+          this.showTabContent('face');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.eyeColors.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
 
     return y;
   }
@@ -680,54 +820,126 @@ export default class AvatarEditorScene extends Phaser.Scene {
     return y;
   }
 
-  private renderAccessoriesOptions(): number {
+  private renderFantasyOptions(): number {
     let y = 0;
+    const cols = 3;
+    const btnWidth = 120;
 
-    const accessoriesLabel = this.add.text(0, y, 'Accessories (toggle on/off)', {
+    // Tails section
+    const tailsLabel = this.add.text(0, y, 'Tail', {
       fontSize: '14px',
       fontFamily: 'Arial, sans-serif',
       color: '#888888',
     });
-    this.optionsContainer.add(accessoriesLabel);
+    this.optionsContainer.add(tailsLabel);
     y += 24;
 
-    // Show message if no accessories available
-    if (this.manifest.accessories.length === 0) {
-      const comingSoon = this.add.text(0, y + 40, 'Coming Soon!', {
-        fontSize: '18px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#666666',
-      });
-      const description = this.add.text(0, y + 70, 'Accessories will be added\nin a future update.', {
-        fontSize: '12px',
-        fontFamily: 'Arial, sans-serif',
-        color: '#555555',
-        align: 'left',
-      });
-      this.optionsContainer.add([comingSoon, description]);
-      return y + 150;
-    }
-
-    const cols = 3;
-    const btnWidth = 120;
-    this.manifest.accessories.forEach((acc, index) => {
+    this.manifest.tails.forEach((tail, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-
-      // Check if this accessory is currently equipped
-      const isEquipped = this.currentConfig.accessories.some(a => a.type === acc.id);
-
+      const currentTail = this.currentConfig.tail?.type || 'none';
       const btn = this.createOptionButton(
         col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
-        acc.displayName,
-        isEquipped,
+        tail.displayName,
+        currentTail === tail.id,
         () => {
-          // Toggle accessory
-          if (isEquipped) {
-            this.currentConfig.accessories = this.currentConfig.accessories.filter(a => a.type !== acc.id);
-          } else {
-            this.currentConfig.accessories.push({ type: acc.id });
-          }
+          if (!this.currentConfig.tail) this.currentConfig.tail = { type: 'none' };
+          this.currentConfig.tail.type = tail.id;
+          this.showTabContent('fantasy');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.tails.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    // Wings section
+    const wingsLabel = this.add.text(0, y, 'Wings', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(wingsLabel);
+    y += 24;
+
+    this.manifest.wings.forEach((wing, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentWing = this.currentConfig.wings?.type || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        wing.displayName,
+        currentWing === wing.id,
+        () => {
+          if (!this.currentConfig.wings) this.currentConfig.wings = { type: 'none' };
+          this.currentConfig.wings.type = wing.id;
+          this.showTabContent('fantasy');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.wings.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    // Horns section
+    const hornsLabel = this.add.text(0, y, 'Horns', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(hornsLabel);
+    y += 24;
+
+    this.manifest.horns.forEach((horn, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentHorn = this.currentConfig.horns?.type || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        horn.displayName,
+        currentHorn === horn.id,
+        () => {
+          if (!this.currentConfig.horns) this.currentConfig.horns = { type: 'none' };
+          this.currentConfig.horns.type = horn.id;
+          this.showTabContent('fantasy');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.horns.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+
+    return y;
+  }
+
+  private renderAccessoriesOptions(): number {
+    let y = 0;
+    const cols = 3;
+    const btnWidth = 120;
+
+    // Hats section
+    const hatsLabel = this.add.text(0, y, 'Hats & Helmets', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(hatsLabel);
+    y += 24;
+
+    this.manifest.hats.forEach((hat, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentHat = this.currentConfig.hat?.type || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        hat.displayName,
+        currentHat === hat.id,
+        () => {
+          if (!this.currentConfig.hat) this.currentConfig.hat = { type: 'none' };
+          this.currentConfig.hat.type = hat.id;
           this.showTabContent('accessories');
           this.updatePreview();
         },
@@ -735,9 +947,36 @@ export default class AvatarEditorScene extends Phaser.Scene {
       );
       this.optionsContainer.add(btn);
     });
+    y += Math.ceil(this.manifest.hats.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
 
-    const accRows = Math.ceil(this.manifest.accessories.length / cols);
-    y += accRows * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
+    // Glasses section
+    const glassesLabel = this.add.text(0, y, 'Eyewear', {
+      fontSize: '14px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#888888',
+    });
+    this.optionsContainer.add(glassesLabel);
+    y += 24;
+
+    this.manifest.glasses.forEach((glass, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const currentGlasses = this.currentConfig.glasses?.type || 'none';
+      const btn = this.createOptionButton(
+        col * (btnWidth + 8), y + row * (OPTION_BUTTON_HEIGHT + 4),
+        glass.displayName,
+        currentGlasses === glass.id,
+        () => {
+          if (!this.currentConfig.glasses) this.currentConfig.glasses = { type: 'none' };
+          this.currentConfig.glasses.type = glass.id;
+          this.showTabContent('accessories');
+          this.updatePreview();
+        },
+        btnWidth
+      );
+      this.optionsContainer.add(btn);
+    });
+    y += Math.ceil(this.manifest.glasses.length / cols) * (OPTION_BUTTON_HEIGHT + 4) + PADDING;
 
     return y;
   }
@@ -856,17 +1095,95 @@ export default class AvatarEditorScene extends Phaser.Scene {
 
     this.previewContainer.add([rotateBtnBg, rotateBtnText]);
 
-    // Loading indicator (hidden by default)
+    // Loading spinner (animated dots)
+    const loadingSpinner = this.add.graphics();
+    loadingSpinner.setName('loadingSpinner');
+    loadingSpinner.setVisible(false);
+    this.previewContainer.add(loadingSpinner);
+
+    // Loading status text (hidden by default)
     const loadingText = this.add.text(0, 105, 'Loading...', {
       fontSize: '12px',
       fontFamily: 'Arial, sans-serif',
       color: '#666666',
+      align: 'center',
     }).setOrigin(0.5).setVisible(false);
     loadingText.setName('loadingText');
     this.previewContainer.add(loadingText);
 
+    // Retry button (hidden by default)
+    const retryBtnBg = this.add.rectangle(0, 105, 80, 28, 0xff6b6b, 1);
+    retryBtnBg.setStrokeStyle(1, 0xff8a8a);
+    retryBtnBg.setInteractive({ useHandCursor: true });
+    retryBtnBg.on('pointerdown', () => this.handleRetry());
+    retryBtnBg.on('pointerover', () => retryBtnBg.setFillStyle(0xff8a8a));
+    retryBtnBg.on('pointerout', () => retryBtnBg.setFillStyle(0xff6b6b));
+    retryBtnBg.setName('retryBtn');
+    retryBtnBg.setVisible(false);
+    this.previewContainer.add(retryBtnBg);
+
+    const retryBtnText = this.add.text(0, 105, 'Retry', {
+      fontSize: '12px',
+      fontFamily: 'Arial, sans-serif',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    retryBtnText.setName('retryBtnText');
+    retryBtnText.setVisible(false);
+    this.previewContainer.add(retryBtnText);
+
     // Manual rotation only - use "Rotate" button to cycle directions
   }
+
+  /**
+   * Handle retry button click - clear failed assets and try again
+   */
+  private handleRetry() {
+    console.log('[AvatarEditor] Retrying preview composition...');
+    // Clear failed assets cache to allow retry
+    avatarAssetLoader.resetFailedAssets();
+    // Try composition again
+    this.updatePreview();
+  }
+
+  /**
+   * Show/hide loading spinner animation
+   */
+  private setLoadingSpinnerVisible(visible: boolean) {
+    const spinner = this.previewContainer.getByName('loadingSpinner') as Phaser.GameObjects.Graphics;
+    if (!spinner) return;
+
+    spinner.setVisible(visible);
+
+    // Stop existing animation
+    if (this.spinnerTween) {
+      this.spinnerTween.destroy();
+      this.spinnerTween = undefined;
+    }
+
+    if (visible) {
+      // Draw simple loading dots
+      let dotIndex = 0;
+      const drawSpinner = () => {
+        spinner.clear();
+        for (let i = 0; i < 3; i++) {
+          const alpha = i === dotIndex ? 1 : 0.3;
+          spinner.fillStyle(0x4caf50, alpha);
+          spinner.fillCircle(-20 + i * 20, -10, 5);
+        }
+        dotIndex = (dotIndex + 1) % 3;
+      };
+
+      drawSpinner();
+      this.spinnerTween = this.time.addEvent({
+        delay: 300,
+        callback: drawSpinner,
+        loop: true,
+      });
+    }
+  }
+
+  private spinnerTween?: Phaser.Time.TimerEvent;
 
   private startDirectionCycling() {
     // Stop existing timer if any
@@ -1037,6 +1354,18 @@ export default class AvatarEditorScene extends Phaser.Scene {
 
     this.isComposing = true;
     const loadingText = this.previewContainer.getByName('loadingText') as Phaser.GameObjects.Text;
+    const retryBtn = this.previewContainer.getByName('retryBtn') as Phaser.GameObjects.Rectangle;
+    const retryBtnText = this.previewContainer.getByName('retryBtnText') as Phaser.GameObjects.Text;
+
+    // Hide retry button, show loading spinner
+    retryBtn?.setVisible(false);
+    retryBtnText?.setVisible(false);
+    this.setLoadingSpinnerVisible(true);
+    if (loadingText) {
+      loadingText.setText('Loading...');
+      loadingText.setColor('#666666');
+      loadingText.setVisible(true);
+    }
 
     try {
       console.log('[AvatarEditor] Composing avatar with config:', this.currentConfig);
@@ -1050,18 +1379,41 @@ export default class AvatarEditorScene extends Phaser.Scene {
       // Play idle animation in current direction
       this.playPreviewAnimation();
 
-      // Hide loading state on success
+      // Hide all loading UI on success
+      this.setLoadingSpinnerVisible(false);
       if (loadingText) loadingText.setVisible(false);
 
       console.log('[AvatarEditor] Preview updated:', textureKey);
     } catch (error) {
       console.error('[AvatarEditor] Failed to compose preview:', error);
-      // Show error message
+
+      // Hide spinner
+      this.setLoadingSpinnerVisible(false);
+
+      // Show error message with retry button
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const isTimeout = errorMsg.includes('Timeout');
+      const isFailed = errorMsg.includes('Failed');
+
       if (loadingText) {
-        loadingText.setText('Error loading\nTry different options');
+        if (isTimeout) {
+          loadingText.setText('Loading took too long');
+        } else if (isFailed) {
+          loadingText.setText('Some assets missing');
+        } else {
+          loadingText.setText('Error loading preview');
+        }
         loadingText.setColor('#ff6666');
+        loadingText.setY(95); // Move up to make room for retry button
         loadingText.setVisible(true);
       }
+
+      // Show retry button
+      retryBtn?.setY(118);
+      retryBtn?.setVisible(true);
+      retryBtnText?.setY(118);
+      retryBtnText?.setVisible(true);
+
       // Stop any animation on the preview sprite to avoid showing broken frames
       if (this.previewSprite.anims.isPlaying) {
         this.previewSprite.anims.stop();
@@ -1158,6 +1510,12 @@ export default class AvatarEditorScene extends Phaser.Scene {
     if (this.debounceTimer) {
       this.debounceTimer.destroy();
       this.debounceTimer = undefined;
+    }
+
+    // Stop spinner tween
+    if (this.spinnerTween) {
+      this.spinnerTween.destroy();
+      this.spinnerTween = undefined;
     }
 
     // Clear mask

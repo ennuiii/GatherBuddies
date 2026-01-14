@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWebRTC } from '../contexts/WebRTCContext';
 import colyseusService from '../services/colyseusService';
-import { conversationAudioRouter } from '../services/conversationAudioRouter';
+import { audioVolumeManager } from '../services/audioVolumeManager';
 
 /**
  * Hook that connects/disconnects video based on conversation membership.
@@ -23,7 +23,6 @@ export function useConversationVideo() {
     localStream,
     isVideoChatActive,
     autoEnableVideoChat,
-    disableVideoChat
   } = useWebRTC();
 
   const currentConversationRef = useRef<string>('');
@@ -95,34 +94,33 @@ export function useConversationVideo() {
         const wasInConversation = currentConversationRef.current !== '';
 
         // Update audio router with my new conversation ID
-        conversationAudioRouter.setMyConversation(newConversationId);
+        audioVolumeManager.setMyConversation(newConversationId);
 
         if (newConversationId === '') {
-          // Left conversation - disconnect from all peers
-          disconnectFromConversationPeers([...oldPeers]);
-          currentPeersRef.current.clear();
-
-          // Disable video when leaving conversation
+          // Left conversation - disconnect from conversation peers
+          // NOTE: Do NOT call disableVideoChat() - keep local stream active for proximity audio
           if (wasInConversation) {
-            console.log('[ConversationVideo] Left conversation, disabling video');
-            disableVideoChat();
+            console.log('[ConversationVideo] Left conversation, disconnecting from conversation peers');
+            disconnectFromConversationPeers([...oldPeers]);
           }
+          currentPeersRef.current.clear();
+          connectedPeersRef.current.clear();
 
-          // Update all remote audio to muted (not in any conversation)
+          // Update all remote audio routing (proximity will handle reconnections)
           state.players?.forEach((player: any, sessionId: string) => {
-            if (sessionId !== mySessionId) {
-              conversationAudioRouter.updateConversationMembership(
-                sessionId,
+            if (sessionId !== mySessionId && player.socketId) {
+              audioVolumeManager.setPeerConversation(
+                player.socketId, // Use Socket.IO ID
                 player.conversationId || ''
               );
             }
           });
         } else {
-          // Joined/changed conversation - find new peers
+          // Joined/changed conversation - find new peers (use socketId for WebRTC)
           const newPeers = new Set<string>();
           state.players?.forEach((player: any, sessionId: string) => {
-            if (sessionId !== mySessionId && player.conversationId === newConversationId) {
-              newPeers.add(sessionId);
+            if (sessionId !== mySessionId && player.conversationId === newConversationId && player.socketId) {
+              newPeers.add(player.socketId); // Use Socket.IO ID, not Colyseus sessionId
             }
           });
 
@@ -149,8 +147,9 @@ export function useConversationVideo() {
           const toConnect = [...newPeers].filter(id => !connectedPeersRef.current.has(id));
           if (toConnect.length > 0) {
             if (localStream) {
-              console.log('[ConversationVideo] Connecting to peers:', toConnect);
-              connectToConversationPeers(toConnect);
+              console.log('[ConversationVideo] Connecting to peers with VIDEO:', toConnect);
+              // Include video for private conversations (true = default, but explicit for clarity)
+              connectToConversationPeers(toConnect, true);
               toConnect.forEach(id => connectedPeersRef.current.add(id));
             } else {
               // Store pending peers - they'll be connected when localStream is ready
@@ -161,11 +160,11 @@ export function useConversationVideo() {
 
           currentPeersRef.current = newPeers;
 
-          // Update audio routing for all remote players
+          // Update audio routing for all remote players (use socketId)
           state.players?.forEach((player: any, sessionId: string) => {
-            if (sessionId !== mySessionId) {
-              conversationAudioRouter.updateConversationMembership(
-                sessionId,
+            if (sessionId !== mySessionId && player.socketId) {
+              audioVolumeManager.setPeerConversation(
+                player.socketId, // Use Socket.IO ID for audio routing
                 player.conversationId || ''
               );
             }
@@ -207,15 +206,16 @@ export function useConversationVideo() {
     return () => {
       // Cleanup handled by WebRTCContext
     };
-  }, [roomReady, connectToConversationPeers, disconnectFromConversationPeers, localStream, isVideoChatActive, autoEnableVideoChat, disableVideoChat]);
+  }, [roomReady, connectToConversationPeers, disconnectFromConversationPeers, localStream, isVideoChatActive, autoEnableVideoChat]);
 
   // Effect to connect pending peers when localStream becomes available
   useEffect(() => {
     if (localStream && pendingPeersRef.current.length > 0) {
       const toConnect = pendingPeersRef.current.filter(id => !connectedPeersRef.current.has(id));
       if (toConnect.length > 0) {
-        console.log('[ConversationVideo] Stream ready, connecting pending peers:', toConnect);
-        connectToConversationPeers(toConnect);
+        console.log('[ConversationVideo] Stream ready, connecting pending peers with VIDEO:', toConnect);
+        // Include video for private conversations
+        connectToConversationPeers(toConnect, true);
         toConnect.forEach(id => connectedPeersRef.current.add(id));
       }
       pendingPeersRef.current = [];

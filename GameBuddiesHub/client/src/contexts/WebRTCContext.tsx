@@ -15,7 +15,8 @@ import {
   addEnhancedDiagnostics
 } from '../utils/webrtcMobileFixes';
 import { VirtualBackgroundService, DEFAULT_VIRTUAL_BACKGROUND_CONFIG } from '../services/virtualBackgroundService';
-import { conversationAudioRouter } from '../services/conversationAudioRouter';
+import { audioVolumeManager } from '../services/audioVolumeManager';
+import colyseusService from '../services/colyseusService';
 
 // ============================================================================
 // Types
@@ -67,7 +68,7 @@ export interface WebRTCContextState {
 
   // Conversation-based connections
   conversationPeers: Set<string>;
-  connectToConversationPeers: (peerIds: string[]) => Promise<void>;
+  connectToConversationPeers: (peerIds: string[], includeVideo?: boolean) => Promise<void>;
   disconnectFromConversationPeers: (peerIds: string[]) => void;
 }
 
@@ -264,8 +265,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
 
     console.log('[WebRTC] Confirming video chat...');
 
-    // Initialize audio router on user gesture
-    await conversationAudioRouter.initialize();
+    // Note: Audio is now handled via HTML <audio> elements in RemoteAudioPlayer
 
     // Read privacy settings from localStorage
     const joinMuted = localStorage.getItem('joinMuted') === 'true';
@@ -359,8 +359,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       setLocalStream(stream);
       localStreamRef.current = stream;
 
-      // Initialize audio router
-      await conversationAudioRouter.initialize();
+      // Note: Audio is now handled via HTML <audio> elements in RemoteAudioPlayer
 
       // Read privacy settings from localStorage
       const joinMuted = localStorage.getItem('joinMuted') === 'true';
@@ -401,8 +400,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       console.log('[WebRTC] Emitted webrtc:disable-video');
     }
 
-    // Clean up audio router
-    conversationAudioRouter.dispose();
+    // Note: Audio cleanup handled by React (RemoteAudioPlayer unmounts)
 
     // Clean up virtual background service
     if (virtualBgServiceRef.current) {
@@ -519,8 +517,8 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
   // Peer Connection Management
   // ============================================================================
 
-  const createPeerConnection = useCallback((peerId: string): RTCPeerConnection => {
-    console.log(`[WebRTC] Creating peer connection for ${peerId}`);
+  const createPeerConnection = useCallback((peerId: string, includeVideo: boolean = true): RTCPeerConnection => {
+    console.log(`[WebRTC] Creating peer connection for ${peerId} (includeVideo: ${includeVideo})`);
 
     const pc = new RTCPeerConnection({
       iceServers: getICEServers(),
@@ -529,10 +527,12 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       rtcpMuxPolicy: 'require'
     });
 
-    // Add local tracks
+    // Add local tracks (optionally exclude video for proximity-only connections)
     if (localStream) {
       localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
+        if (track.kind === 'audio' || (track.kind === 'video' && includeVideo)) {
+          pc.addTrack(track, localStream);
+        }
       });
     }
 
@@ -553,12 +553,40 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
 
     // Handle remote tracks
     pc.ontrack = (event) => {
-      console.log(`[WebRTC] Received track from ${peerId}`);
+      const track = event.track;
       const [stream] = event.streams;
-      setRemoteStreams(prev => new Map(prev).set(peerId, stream));
+      console.log(`[WebRTC] 🎵 Received track from ${peerId}:`, {
+        trackKind: track.kind,
+        trackEnabled: track.enabled,
+        trackMuted: track.muted,
+        trackReadyState: track.readyState,
+        streamAudioTracks: stream?.getAudioTracks().length || 0,
+        streamVideoTracks: stream?.getVideoTracks().length || 0
+      });
 
-      // Attach to audio router (conversation ID will be updated by conversation hook)
-      conversationAudioRouter.attachStream(peerId, stream, '');
+      if (stream) {
+        setRemoteStreams(prev => new Map(prev).set(peerId, stream));
+
+        // Look up peer's conversation ID from Colyseus state
+        const room = colyseusService.getRoom();
+        let peerConversationId = '';
+        if (room) {
+          const state = room.state as any;
+          // Find player by socketId (peerId is the Socket.IO ID)
+          state.players?.forEach((player: any) => {
+            if (player.socketId === peerId) {
+              peerConversationId = player.conversationId || '';
+            }
+          });
+        }
+
+        console.log(`[WebRTC] Attaching stream for ${peerId.slice(0, 8)}, peerConversationId: ${peerConversationId || 'none'}`);
+        // Note: Audio playback is handled by RemoteAudioPlayer component
+        // Update audioVolumeManager with peer's conversation state
+        audioVolumeManager.setPeerConversation(peerId, peerConversationId);
+      } else {
+        console.warn(`[WebRTC] No stream in track event from ${peerId}`);
+      }
     };
 
     // Handle connection state
@@ -571,8 +599,8 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
           next.delete(peerId);
           return next;
         });
-        // Remove from audio router
-        conversationAudioRouter.removeStream(peerId);
+        // Clean up volume manager
+        audioVolumeManager.removePeer(peerId);
       }
     };
 
@@ -587,14 +615,16 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
   /**
    * Connect to peers in a conversation.
    * Only initiates connection from higher sessionId to prevent duplicates.
+   * @param peerIds Array of peer socket IDs to connect to
+   * @param includeVideo Whether to include video track (default: true for conversations, false for proximity)
    */
-  const connectToConversationPeers = useCallback(async (peerIds: string[]) => {
+  const connectToConversationPeers = useCallback(async (peerIds: string[], includeVideo: boolean = true) => {
     if (!socket || !localStream) {
       console.warn('[WebRTC] Cannot connect to conversation peers - no socket or local stream');
       return;
     }
 
-    console.log('[WebRTC] Connecting to conversation peers:', peerIds);
+    console.log(`[WebRTC] Connecting to peers:`, peerIds, `(includeVideo: ${includeVideo})`);
 
     for (const peerId of peerIds) {
       if (peerId === socket.id) continue;
@@ -602,16 +632,31 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
       // Check if already connected
       const existingPc = peerConnections.current.get(peerId);
       if (existingPc && existingPc.connectionState !== 'failed') {
-        console.log(`[WebRTC] Already connected to ${peerId}, skipping`);
-        continue;
+        // Check if we need to upgrade from audio-only to video
+        const hasVideoSender = existingPc.getSenders().some(s => s.track?.kind === 'video');
+        if (includeVideo && !hasVideoSender) {
+          // Need to upgrade: close existing and create new with video
+          console.log(`[WebRTC] Upgrading connection to ${peerId} (adding video)`);
+          existingPc.close();
+          peerConnections.current.delete(peerId);
+          // Remove from remote streams so we get fresh ones
+          setRemoteStreams(prev => {
+            const next = new Map(prev);
+            next.delete(peerId);
+            return next;
+          });
+        } else {
+          console.log(`[WebRTC] Already connected to ${peerId}, skipping`);
+          continue;
+        }
       }
 
       // Only initiate from higher sessionId to prevent duplicate connections
       const shouldInitiate = socket.id && socket.id > peerId;
-      console.log(`[WebRTC] Conversation peer ${peerId}: shouldInitiate=${shouldInitiate} (our ID: ${socket.id})`);
+      console.log(`[WebRTC] Peer ${peerId}: shouldInitiate=${shouldInitiate} (our ID: ${socket.id})`);
 
       if (shouldInitiate) {
-        const pc = createPeerConnection(peerId);
+        const pc = createPeerConnection(peerId, includeVideo);
 
         try {
           const offer = await pc.createOffer();
@@ -622,7 +667,7 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
             toPeerId: peerId,
             offer: pc.localDescription
           });
-          console.log(`[WebRTC] Sent conversation offer to ${peerId}`);
+          console.log(`[WebRTC] Sent offer to ${peerId} (includeVideo: ${includeVideo})`);
         } catch (error) {
           console.error(`[WebRTC] Failed to create offer for ${peerId}:`, error);
         }
@@ -698,8 +743,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
         return;
       }
 
-      // Check if we should initiate (smaller ID initiates to avoid race condition)
-      const shouldInitiate = socket.id && socket.id < peerId;
+      // Check if we should initiate (higher ID initiates to avoid race condition)
+      // IMPORTANT: Must match logic in connectToConversationPeers
+      const shouldInitiate = socket.id && socket.id > peerId;
       console.log(`[WebRTC] shouldInitiate: ${shouldInitiate} (our ID: ${socket.id}, peer ID: ${peerId})`);
 
       if (shouldInitiate) {
@@ -742,17 +788,20 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
         return next;
       });
 
-      // Remove from audio router
-      conversationAudioRouter.removeStream(peerId);
+      // Clean up volume manager
+      audioVolumeManager.removePeer(peerId);
     };
 
     // Handle offer from peer
     const handleOffer = async ({ fromPeerId, offer }: { fromPeerId: string; offer: RTCSessionDescriptionInit }) => {
-      console.log(`[WebRTC] Received offer from ${fromPeerId}`);
+      // Detect if offer includes video by checking for video m-line in SDP
+      const hasVideoInOffer = offer.sdp?.includes('m=video') ?? false;
+      console.log(`[WebRTC] Received offer from ${fromPeerId} (hasVideo: ${hasVideoInOffer})`);
 
       let pc = peerConnections.current.get(fromPeerId);
       if (!pc) {
-        pc = createPeerConnection(fromPeerId);
+        // Match the offer's media types to avoid negotiation issues
+        pc = createPeerConnection(fromPeerId, hasVideoInOffer);
       }
 
       try {
@@ -836,8 +885,8 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
         return next;
       });
 
-      // Remove from audio router
-      conversationAudioRouter.removeStream(peerId);
+      // Clean up volume manager
+      audioVolumeManager.removePeer(peerId);
     };
 
     socket.on('webrtc:peer-enabled-video', handlePeerEnabledVideo);
@@ -876,8 +925,9 @@ export const WebRTCProvider: React.FC<WebRTCProviderProps> = ({
           continue;
         }
 
-        // Check if we should initiate
-        const shouldInitiate = socket.id && socket.id < peerId;
+        // Check if we should initiate (higher ID initiates)
+        // IMPORTANT: Must match logic in connectToConversationPeers and handlePeerEnabledVideo
+        const shouldInitiate = socket.id && socket.id > peerId;
         console.log(`[WebRTC] Checking peer ${peerId}: shouldInitiate=${shouldInitiate}`);
 
         if (shouldInitiate) {

@@ -35,6 +35,7 @@ interface NavKeys {
   down: Phaser.Input.Keyboard.Key;
   left: Phaser.Input.Keyboard.Key;
   right: Phaser.Input.Keyboard.Key;
+  shift: Phaser.Input.Keyboard.Key;
   W: Phaser.Input.Keyboard.Key;
   S: Phaser.Input.Keyboard.Key;
   A: Phaser.Input.Keyboard.Key;

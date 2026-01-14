@@ -141,6 +141,24 @@ const EYES = [
   { id: 'eyes_gray', path: 'eyes/human/adult/gray.png' },
 ];
 
+// ============================================================================
+// FACES (HEADS) - path format: head/heads/human/{gender}/{skin}.png
+// ============================================================================
+const FACE_GENDERS = ['male', 'female'];
+
+// ============================================================================
+// NOSES - path format: head/nose/{style}/adult/{skin}.png
+// ============================================================================
+const NOSE_STYLES = ['straight', 'big', 'button', 'buttonnose'];
+
+// ============================================================================
+// EARS - path format: head/ears/{style}/adult.png
+// ============================================================================
+const EARS = [
+  { id: 'ears_default', path: 'head/ears/bigears/adult.png' },
+  { id: 'ears_elven', path: 'head/ears/elven/adult.png' },
+];
+
 // Track progress
 let downloaded = 0;
 let failed = 0;

@@ -1,0 +1,65 @@
+/* Game Ad Styles */
+
+.game-ad-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1.5rem auto;
+  max-width: 300px;
+}
+
+/* Development placeholder */
+.game-ad-placeholder {
+  width: 300px;
+  height: 250px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.game-ad-placeholder .ad-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.game-ad-placeholder .ad-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.game-ad-placeholder .ad-title {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.game-ad-placeholder .ad-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .game-ad-container {
+    margin: 1rem auto;
+  }
+
+  .game-ad-placeholder {
+    width: 280px;
+    height: 230px;
+  }
+}

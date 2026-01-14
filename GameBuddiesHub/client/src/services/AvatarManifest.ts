@@ -19,6 +19,13 @@ import type {
   AccessoryType,
   BeardStyle,
   EyeColor,
+  HeadType,
+  EarType,
+  TailType,
+  WingType,
+  HornType,
+  HatType,
+  GlassesType,
 } from '../types/avatar';
 
 // ============================================================================
@@ -57,6 +64,134 @@ export const SKIN_TONES: SkinToneOption[] = [
 ];
 
 // ============================================================================
+// Head Types (Creature/Species Heads)
+// ============================================================================
+// All discovered from LPC-Reference with male+female support and full animations
+
+export interface HeadTypeOption {
+  id: HeadType;
+  displayName: string;
+  category: 'human' | 'fantasy' | 'beast' | 'undead' | 'other';
+}
+
+export const HEAD_TYPES: HeadTypeOption[] = [
+  // Human (default)
+  { id: 'human', displayName: 'Human', category: 'human' },
+  // Fantasy races
+  { id: 'goblin', displayName: 'Goblin', category: 'fantasy' },
+  { id: 'orc', displayName: 'Orc', category: 'fantasy' },
+  { id: 'troll', displayName: 'Troll', category: 'fantasy' },
+  // Animal/beast heads
+  { id: 'wolf', displayName: 'Wolf', category: 'beast' },
+  { id: 'cat', displayName: 'Cat', category: 'beast' },
+  { id: 'lizard', displayName: 'Lizard', category: 'beast' },
+  { id: 'reptile', displayName: 'Reptile', category: 'beast' },
+  // Mythical creatures
+  { id: 'minotaur', displayName: 'Minotaur', category: 'fantasy' },
+  { id: 'demon', displayName: 'Demon', category: 'fantasy' },
+  { id: 'skeleton', displayName: 'Skeleton', category: 'undead' },
+  // Undead/horror
+  { id: 'vampire', displayName: 'Vampire', category: 'undead' },
+  { id: 'zombie', displayName: 'Zombie', category: 'undead' },
+  // Alien/other
+  { id: 'alien', displayName: 'Alien', category: 'other' },
+  { id: 'cyclops', displayName: 'Cyclops', category: 'other' },
+];
+
+// ============================================================================
+// Ears (decorative ear options)
+// ============================================================================
+
+export interface EarOption {
+  id: EarType;
+  displayName: string;
+  category: 'none' | 'elven' | 'animal' | 'fantasy' | 'jewelry';
+}
+
+export const EARS: EarOption[] = [
+  { id: 'none', displayName: 'None', category: 'none' },
+  // Elven ears
+  { id: 'elven_ears', displayName: 'Elven Ears', category: 'elven' },
+  { id: 'elven_ears_thin', displayName: 'Thin Elven Ears', category: 'elven' },
+  // Animal ears
+  { id: 'cat_ears', displayName: 'Cat Ears', category: 'animal' },
+  { id: 'wolf_ears', displayName: 'Wolf Ears', category: 'animal' },
+  { id: 'dog_ears', displayName: 'Dog Ears', category: 'animal' },
+  // Fantasy ears
+  { id: 'feathered_ears', displayName: 'Feathered Ears', category: 'fantasy' },
+  { id: 'dragon_ears', displayName: 'Dragon Ears', category: 'fantasy' },
+  // Jewelry/piercings
+  { id: 'ear_studs', displayName: 'Ear Studs', category: 'jewelry' },
+  { id: 'ear_rings', displayName: 'Ear Rings', category: 'jewelry' },
+];
+
+// ============================================================================
+// Tails
+// ============================================================================
+
+export interface TailOption {
+  id: TailType;
+  displayName: string;
+  category: 'none' | 'animal' | 'fantasy';
+}
+
+export const TAILS: TailOption[] = [
+  { id: 'none', displayName: 'None', category: 'none' },
+  // Animal tails
+  { id: 'cat_tail', displayName: 'Cat Tail', category: 'animal' },
+  { id: 'wolf_tail', displayName: 'Wolf Tail', category: 'animal' },
+  { id: 'fox_tail', displayName: 'Fox Tail', category: 'animal' },
+  // Fantasy tails
+  { id: 'lizard_tail', displayName: 'Lizard Tail', category: 'fantasy' },
+  { id: 'dragon_tail', displayName: 'Dragon Tail', category: 'fantasy' },
+  { id: 'demon_tail', displayName: 'Demon Tail', category: 'fantasy' },
+];
+
+// ============================================================================
+// Wings
+// ============================================================================
+
+export interface WingOption {
+  id: WingType;
+  displayName: string;
+  category: 'none' | 'bat' | 'feathered' | 'insect' | 'dragon';
+}
+
+export const WINGS: WingOption[] = [
+  { id: 'none', displayName: 'None', category: 'none' },
+  // Bat-like wings
+  { id: 'bat_wings', displayName: 'Bat Wings', category: 'bat' },
+  { id: 'demon_wings', displayName: 'Demon Wings', category: 'bat' },
+  // Feathered wings
+  { id: 'angel_wings', displayName: 'Angel Wings', category: 'feathered' },
+  { id: 'feathered_wings', displayName: 'Feathered Wings', category: 'feathered' },
+  // Insect wings
+  { id: 'butterfly_wings', displayName: 'Butterfly Wings', category: 'insect' },
+  { id: 'fairy_wings', displayName: 'Fairy Wings', category: 'insect' },
+  { id: 'pixie_wings', displayName: 'Pixie Wings', category: 'insect' },
+  // Dragon/reptile wings
+  { id: 'dragon_wings', displayName: 'Dragon Wings', category: 'dragon' },
+  { id: 'lizard_wings', displayName: 'Lizard Wings', category: 'dragon' },
+];
+
+// ============================================================================
+// Horns
+// ============================================================================
+
+export interface HornOption {
+  id: HornType;
+  displayName: string;
+}
+
+export const HORNS: HornOption[] = [
+  { id: 'none', displayName: 'None' },
+  { id: 'horns_backwards', displayName: 'Backwards Horns' },
+  { id: 'horns_curled', displayName: 'Curled Horns' },
+  { id: 'horns_small', displayName: 'Small Horns' },
+  { id: 'horns_demon', displayName: 'Demon Horns' },
+];
+
+// ============================================================================
 // Hair Styles (from lpc/hair/*)
 // ============================================================================
 
@@ -72,36 +207,62 @@ export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'pixie', displayName: 'Pixie', hasBackLayer: false },
   { id: 'bedhead', displayName: 'Bedhead', hasBackLayer: false },
   { id: 'bob', displayName: 'Bob', hasBackLayer: false },
+  { id: 'bob_side_part', displayName: 'Bob Side Part', hasBackLayer: false },
   { id: 'cowlick', displayName: 'Cowlick', hasBackLayer: false },
   { id: 'spiked', displayName: 'Spiked', hasBackLayer: false },
-  { id: 'shorthawk', displayName: 'Mohawk', hasBackLayer: false },
+  { id: 'shorthawk', displayName: 'Short Mohawk', hasBackLayer: false },
+  { id: 'mohawk', displayName: 'Mohawk', hasBackLayer: false },
   { id: 'buzzcut', displayName: 'Buzzcut', hasBackLayer: false },
   { id: 'flat_top_fade', displayName: 'Flat Top', hasBackLayer: false },
+  { id: 'emo', displayName: 'Emo', hasBackLayer: false },
+  { id: 'jewfro', displayName: 'Jewfro', hasBackLayer: false },
 
   // Medium styles
   { id: 'bangs', displayName: 'Bangs', hasBackLayer: false },
   { id: 'bangslong', displayName: 'Long Bangs', hasBackLayer: false },
+  { id: 'bangs_bun', displayName: 'Bangs Bun', hasBackLayer: false },
   { id: 'parted', displayName: 'Parted', hasBackLayer: false },
+  { id: 'parted2', displayName: 'Parted Alt', hasBackLayer: false },
+  { id: 'parted3', displayName: 'Parted V3', hasBackLayer: false },
+  { id: 'parted_side_bangs', displayName: 'Side Bangs', hasBackLayer: false },
+  { id: 'parted_side_bangs2', displayName: 'Side Bangs Alt', hasBackLayer: false },
   { id: 'swoop', displayName: 'Swoop', hasBackLayer: false },
-  { id: 'curly_short', displayName: 'Curly', hasBackLayer: false },
+  { id: 'curtains', displayName: 'Curtains', hasBackLayer: false },
+  { id: 'curly_short', displayName: 'Curly Short', hasBackLayer: false },
+  { id: 'curly_short2', displayName: 'Curly Short Alt', hasBackLayer: false },
   { id: 'ponytail', displayName: 'Ponytail', hasBackLayer: false },
   { id: 'ponytail2', displayName: 'Ponytail Alt', hasBackLayer: false },
+  { id: 'ponytail_simple', displayName: 'Simple Ponytail', hasBackLayer: false },
   { id: 'braid', displayName: 'Braid', hasBackLayer: false },
+  { id: 'single_braid', displayName: 'Single Braid', hasBackLayer: false },
+  { id: 'braids', displayName: 'Braids', hasBackLayer: false },
   { id: 'idol', displayName: 'Idol', hasBackLayer: false },
   { id: 'shoulderl', displayName: 'Shoulder Left', hasBackLayer: false },
   { id: 'shoulderr', displayName: 'Shoulder Right', hasBackLayer: false },
   { id: 'messy1', displayName: 'Messy', hasBackLayer: false },
+  { id: 'messy2', displayName: 'Messy Alt', hasBackLayer: false },
   { id: 'page', displayName: 'Page', hasBackLayer: false },
+  { id: 'page2', displayName: 'Page Alt', hasBackLayer: false },
+  { id: 'lob', displayName: 'Lob', hasBackLayer: false },
+  { id: 'sara', displayName: 'Sara', hasBackLayer: false },
+  { id: 'shortknot', displayName: 'Short Knot', hasBackLayer: false },
+  { id: 'tied', displayName: 'Tied', hasBackLayer: false },
 
   // Long styles
   { id: 'long', displayName: 'Long', hasBackLayer: false },
   { id: 'long_straight', displayName: 'Long Straight', hasBackLayer: false },
   { id: 'long_messy', displayName: 'Long Messy', hasBackLayer: false },
+  { id: 'loose', displayName: 'Loose', hasBackLayer: false },
   { id: 'curly_long', displayName: 'Long Curly', hasBackLayer: false },
+  { id: 'curly_long2', displayName: 'Long Curly Alt', hasBackLayer: false },
   { id: 'wavy', displayName: 'Wavy', hasBackLayer: false },
   { id: 'princess', displayName: 'Princess', hasBackLayer: false },
   { id: 'high_ponytail', displayName: 'High Ponytail', hasBackLayer: false },
   { id: 'pigtails', displayName: 'Pigtails', hasBackLayer: false },
+  { id: 'twintail', displayName: 'Twintail', hasBackLayer: false },
+  { id: 'odango', displayName: 'Odango', hasBackLayer: false },
+  { id: 'spacebuns', displayName: 'Space Buns', hasBackLayer: false },
+  { id: 'bunches', displayName: 'Bunches', hasBackLayer: false },
   { id: 'xlong', displayName: 'Extra Long', hasBackLayer: false },
   { id: 'half_up', displayName: 'Half Up', hasBackLayer: false },
 
@@ -111,6 +272,8 @@ export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'dreadlocks_short', displayName: 'Short Dreads', hasBackLayer: false },
   { id: 'cornrows', displayName: 'Cornrows', hasBackLayer: false },
   { id: 'natural', displayName: 'Natural', hasBackLayer: false },
+  { id: 'twists_fade', displayName: 'Twists Fade', hasBackLayer: false },
+  { id: 'twists_straight', displayName: 'Twists Straight', hasBackLayer: false },
 
   // Special
   { id: 'balding', displayName: 'Balding', hasBackLayer: false },
@@ -160,10 +323,18 @@ export interface ClothingBottomOption {
 // Items with only 21 rows (skirt) are excluded
 // Leggings only have female assets in LPC
 export const BOTTOMS: ClothingBottomOption[] = [
+  // Basic styles (male + female)
   { id: 'pants', displayName: 'Pants', supportedBodyTypes: ['male', 'female'] },
   { id: 'shorts', displayName: 'Shorts', supportedBodyTypes: ['male', 'female'] },
-  { id: 'leggings', displayName: 'Leggings', supportedBodyTypes: ['female'] },
   { id: 'pantaloons', displayName: 'Pantaloons', supportedBodyTypes: ['male', 'female'] },
+  // Extended styles
+  { id: 'pants_formal', displayName: 'Formal Pants', supportedBodyTypes: ['male', 'female'] },
+  { id: 'pants_fur', displayName: 'Fur Pants', supportedBodyTypes: ['male', 'female'] },
+  { id: 'pants_legion', displayName: 'Legion Pants', supportedBodyTypes: ['male', 'female'] },
+  { id: 'shorts_cargo', displayName: 'Cargo Shorts', supportedBodyTypes: ['male', 'female'] },
+  { id: 'shorts_legion', displayName: 'Legion Shorts', supportedBodyTypes: ['male', 'female'] },
+  // Female only
+  { id: 'leggings', displayName: 'Leggings', supportedBodyTypes: ['female'] },
 ];
 
 // ============================================================================
@@ -182,14 +353,94 @@ export interface ShoesOption {
 // 'none' is a special option for barefoot (no shoe layer rendered)
 export const SHOES: ShoesOption[] = [
   { id: 'none' as Shoes, displayName: 'Barefoot', supportedBodyTypes: ['male', 'female'] },
+  // Basic shoes (extended animations)
   { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'female'] },
   { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'female'] },
+  // Extended options
+  { id: 'socks', displayName: 'Socks', supportedBodyTypes: ['male', 'female'] },
+  { id: 'sandals2', displayName: 'Sandals', supportedBodyTypes: ['male', 'female'] },
+  { id: 'slippers2', displayName: 'Slippers', supportedBodyTypes: ['male', 'female'] },
+  // Armor/special boots
+  { id: 'boots_armor', displayName: 'Armor Boots', supportedBodyTypes: ['male', 'female'] },
+  { id: 'boots_fur', displayName: 'Fur Boots', supportedBodyTypes: ['male', 'female'] },
+  { id: 'boots_legion', displayName: 'Legion Boots', supportedBodyTypes: ['male', 'female'] },
 ];
 
 // ============================================================================
-// Accessories (Glasses & Hats)
+// Hats & Helmets (expanded headwear options)
 // ============================================================================
 
+export interface HatOption {
+  id: HatType;
+  displayName: string;
+  category: 'none' | 'casual' | 'formal' | 'crown' | 'helmet' | 'hood' | 'other';
+}
+
+export const HATS: HatOption[] = [
+  { id: 'none', displayName: 'None', category: 'none' },
+  // Casual hats
+  { id: 'bandana', displayName: 'Bandana', category: 'casual' },
+  { id: 'hood', displayName: 'Hood', category: 'casual' },
+  { id: 'beanie', displayName: 'Beanie', category: 'casual' },
+  { id: 'cap', displayName: 'Cap', category: 'casual' },
+  { id: 'beret', displayName: 'Beret', category: 'casual' },
+  { id: 'headband', displayName: 'Headband', category: 'casual' },
+  // Formal hats
+  { id: 'tophat', displayName: 'Top Hat', category: 'formal' },
+  { id: 'bowler', displayName: 'Bowler Hat', category: 'formal' },
+  { id: 'fedora', displayName: 'Fedora', category: 'formal' },
+  { id: 'tricorn', displayName: 'Tricorn', category: 'formal' },
+  // Crowns & tiaras
+  { id: 'crown', displayName: 'Crown', category: 'crown' },
+  { id: 'tiara', displayName: 'Tiara', category: 'crown' },
+  { id: 'circlet', displayName: 'Circlet', category: 'crown' },
+  { id: 'diadem', displayName: 'Diadem', category: 'crown' },
+  // Medieval helmets
+  { id: 'helmet_barbute', displayName: 'Barbute Helmet', category: 'helmet' },
+  { id: 'helmet_chain', displayName: 'Chain Helmet', category: 'helmet' },
+  { id: 'helmet_cloth', displayName: 'Cloth Helmet', category: 'helmet' },
+  { id: 'helmet_jousting', displayName: 'Jousting Helmet', category: 'helmet' },
+  { id: 'helmet_legion', displayName: 'Legion Helmet', category: 'helmet' },
+  { id: 'helmet_metal', displayName: 'Metal Helmet', category: 'helmet' },
+  { id: 'helmet_plate', displayName: 'Plate Helmet', category: 'helmet' },
+  { id: 'helmet_viking', displayName: 'Viking Helmet', category: 'helmet' },
+  // Hoods & cowls
+  { id: 'hood_chain', displayName: 'Chain Hood', category: 'hood' },
+  { id: 'hood_cloth', displayName: 'Cloth Hood', category: 'hood' },
+  { id: 'cowl', displayName: 'Cowl', category: 'hood' },
+  // Other headwear
+  { id: 'turban', displayName: 'Turban', category: 'other' },
+  { id: 'veil', displayName: 'Veil', category: 'other' },
+  { id: 'mask', displayName: 'Mask', category: 'other' },
+];
+
+// ============================================================================
+// Glasses & Eyewear
+// ============================================================================
+
+export interface GlassesOption {
+  id: GlassesType;
+  displayName: string;
+  category: 'none' | 'glasses' | 'sunglasses' | 'special';
+}
+
+export const GLASSES: GlassesOption[] = [
+  { id: 'none', displayName: 'None', category: 'none' },
+  // Regular glasses
+  { id: 'glasses', displayName: 'Glasses', category: 'glasses' },
+  { id: 'glasses_round', displayName: 'Round Glasses', category: 'glasses' },
+  { id: 'glasses_nerd', displayName: 'Nerd Glasses', category: 'glasses' },
+  { id: 'monocle', displayName: 'Monocle', category: 'glasses' },
+  // Sunglasses
+  { id: 'sunglasses', displayName: 'Sunglasses', category: 'sunglasses' },
+  { id: 'shades', displayName: 'Shades', category: 'sunglasses' },
+  { id: 'shades_aviator', displayName: 'Aviator Shades', category: 'sunglasses' },
+  // Special eyewear
+  { id: 'eyepatch', displayName: 'Eyepatch', category: 'special' },
+  { id: 'goggles', displayName: 'Goggles', category: 'special' },
+];
+
+// Legacy ACCESSORIES for backward compatibility
 export interface AccessoryOption {
   id: AccessoryType;
   displayName: string;
@@ -221,11 +472,20 @@ export interface BeardOption {
 
 export const BEARDS: BeardOption[] = [
   { id: 'none', displayName: 'None' },
+  // Beards
   { id: 'beard_basic', displayName: 'Basic Beard' },
   { id: 'beard_medium', displayName: 'Medium Beard' },
   { id: 'beard_trimmed', displayName: 'Trimmed Beard' },
   { id: 'beard_full', displayName: 'Full Beard' },
+  { id: 'beard_winter', displayName: 'Winter Beard' },
+  { id: 'beard_5oclock', displayName: '5 O\'clock Shadow' },
+  // Mustaches
   { id: 'mustache_basic', displayName: 'Mustache' },
+  { id: 'mustache_handlebar', displayName: 'Handlebar Mustache' },
+  { id: 'mustache_thin', displayName: 'Thin Mustache' },
+  // Goatees
+  { id: 'goatee', displayName: 'Goatee' },
+  { id: 'goatee_thin', displayName: 'Thin Goatee' },
 ];
 
 // ============================================================================
@@ -340,13 +600,25 @@ export const CLOTHING_COLORS: string[] = [
 export interface AvatarManifest {
   bodyTypes: BodyTypeOption[];
   skinTones: SkinToneOption[];
+  // Fantasy customization
+  headTypes: HeadTypeOption[];
+  ears: EarOption[];
+  tails: TailOption[];
+  wings: WingOption[];
+  horns: HornOption[];
+  // Hair & facial
   hairStyles: HairStyleOption[];
+  beards: BeardOption[];
+  eyeColors: EyeColorOption[];
+  // Clothing
   tops: ClothingTopOption[];
   bottoms: ClothingBottomOption[];
   shoes: ShoesOption[];
-  accessories: AccessoryOption[];
-  beards: BeardOption[];
-  eyeColors: EyeColorOption[];
+  // Accessories
+  hats: HatOption[];
+  glasses: GlassesOption[];
+  accessories: AccessoryOption[]; // Legacy
+  // Colors
   hairColors: string[];
   clothingColors: string[];
 }
@@ -359,13 +631,25 @@ export function getAvailableOptions(): AvatarManifest {
   return {
     bodyTypes: BODY_TYPES,
     skinTones: SKIN_TONES,
+    // Fantasy customization
+    headTypes: HEAD_TYPES,
+    ears: EARS,
+    tails: TAILS,
+    wings: WINGS,
+    horns: HORNS,
+    // Hair & facial
     hairStyles: HAIR_STYLES,
+    beards: BEARDS,
+    eyeColors: EYE_COLORS,
+    // Clothing
     tops: TOPS,
     bottoms: BOTTOMS,
     shoes: SHOES,
+    // Accessories
+    hats: HATS,
+    glasses: GLASSES,
     accessories: ACCESSORIES,
-    beards: BEARDS,
-    eyeColors: EYE_COLORS,
+    // Colors
     hairColors: HAIR_COLORS,
     clothingColors: CLOTHING_COLORS,
   };
@@ -385,14 +669,28 @@ export function getSkinToneById(id: SkinTone): SkinToneOption | undefined {
   return SKIN_TONES.find(s => s.id === id);
 }
 
+/**
+ * Get head type info by ID
+ */
+export function getHeadTypeById(id: HeadType): HeadTypeOption | undefined {
+  return HEAD_TYPES.find(h => h.id === id);
+}
+
 // Export default for convenient importing
 export default {
   BODY_TYPES,
   SKIN_TONES,
+  HEAD_TYPES,
+  EARS,
+  TAILS,
+  WINGS,
+  HORNS,
   HAIR_STYLES,
   TOPS,
   BOTTOMS,
   SHOES,
+  HATS,
+  GLASSES,
   ACCESSORIES,
   BEARDS,
   EYE_COLORS,
@@ -401,4 +699,5 @@ export default {
   getAvailableOptions,
   getHairStyleById,
   getSkinToneById,
+  getHeadTypeById,
 };

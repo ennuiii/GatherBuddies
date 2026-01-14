@@ -64,6 +64,14 @@ class AvatarStorageService {
       modified = true;
     }
 
+    // Fix old hair styles that no longer exist
+    const hairStyle = config.hair.style as string;
+    if (hairStyle === 'short' || hairStyle === 'curly' || hairStyle === 'bangs_long') {
+      console.warn(`[AvatarStorage] Migrating hair style '${hairStyle}' to 'pixie'`);
+      config.hair.style = 'pixie';
+      modified = true;
+    }
+
     // Remove invalid accessories
     if (config.accessories && config.accessories.length > 0) {
       const validAccessories = config.accessories.filter(a => VALID_ACCESSORIES.has(a.type));

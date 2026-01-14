@@ -7,6 +7,7 @@
 
 import { Client, Room } from 'colyseus.js';
 import { COLYSEUS_URL } from '../config/gameMeta';
+import socketService from './socketService';
 
 // Message types (must match server - GameBuddieGamesServer/games/hub/Message.ts)
 export enum HubMessage {
@@ -50,9 +51,13 @@ class ColyseusService {
       this.leave();
     }
 
+    // Get Socket.IO socket ID for WebRTC mapping
+    const socketId = socketService.getSocket()?.id || '';
+
     this.connectionPromise = this.client.joinOrCreate('hub', {
       roomCode,
       playerName,
+      socketId, // Pass Socket.IO ID so Colyseus state can be used for WebRTC peer lookup
     });
 
     try {
