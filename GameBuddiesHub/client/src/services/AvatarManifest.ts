@@ -16,6 +16,8 @@ import type {
   ClothingBottom,
   Shoes,
   AccessoryType,
+  BeardStyle,
+  EyeColor,
 } from '../types/avatar';
 
 // ============================================================================
@@ -28,9 +30,11 @@ export interface BodyTypeOption {
 }
 
 export const BODY_TYPES: BodyTypeOption[] = [
-  { id: 'masculine', displayName: 'Masculine' },
-  { id: 'feminine', displayName: 'Feminine' },
-  { id: 'neutral', displayName: 'Neutral' },
+  { id: 'male', displayName: 'Male' },
+  { id: 'female', displayName: 'Female' },
+  { id: 'muscular', displayName: 'Muscular' },
+  { id: 'child', displayName: 'Child' },
+  { id: 'teen', displayName: 'Teen' },
 ];
 
 // ============================================================================
@@ -47,8 +51,11 @@ export interface SkinToneOption {
 export const SKIN_TONES: SkinToneOption[] = [
   { id: 'light', displayName: 'Light', hex: '#FFE4C4' },
   { id: 'olive', displayName: 'Olive', hex: '#D4A574' },
-  { id: 'tan', displayName: 'Tan', hex: '#8D5524' },
-  { id: 'dark', displayName: 'Dark', hex: '#4A2C17' },
+  { id: 'bronze', displayName: 'Bronze', hex: '#CD853F' },
+  { id: 'brown', displayName: 'Brown', hex: '#8B4513' },
+  { id: 'amber', displayName: 'Amber', hex: '#FFBF00' },
+  { id: 'taupe', displayName: 'Taupe', hex: '#87776F' },
+  { id: 'black', displayName: 'Dark', hex: '#3D2B1F' },
 ];
 
 // ============================================================================
@@ -62,16 +69,45 @@ export interface HairStyleOption {
 }
 
 // NOTE: Hair style IDs must match filenames in public/assets/avatars/hair/*.png
-// Back layer files (e.g., ponytail_back.png) don't exist yet - all set to false
 export const HAIR_STYLES: HairStyleOption[] = [
+  // Short styles
+  { id: 'pixie', displayName: 'Pixie', hasBackLayer: false },
+  { id: 'bedhead', displayName: 'Bedhead', hasBackLayer: false },
+  { id: 'bob', displayName: 'Bob', hasBackLayer: false },
+  { id: 'cowlick', displayName: 'Cowlick', hasBackLayer: false },
   { id: 'short', displayName: 'Short', hasBackLayer: false },
-  { id: 'long', displayName: 'Long', hasBackLayer: false },
+  { id: 'spiked', displayName: 'Spiked', hasBackLayer: false },
+  { id: 'mohawk', displayName: 'Mohawk', hasBackLayer: false },
+
+  // Medium styles
+  { id: 'bangs', displayName: 'Bangs', hasBackLayer: false },
+  { id: 'bangs_long', displayName: 'Long Bangs', hasBackLayer: false },
+  { id: 'parted', displayName: 'Parted', hasBackLayer: false },
+  { id: 'swoop', displayName: 'Swoop', hasBackLayer: false },
   { id: 'curly', displayName: 'Curly', hasBackLayer: false },
   { id: 'ponytail', displayName: 'Ponytail', hasBackLayer: false },
-  { id: 'mohawk', displayName: 'Mohawk', hasBackLayer: false },
-  { id: 'bald', displayName: 'Bald', hasBackLayer: false },
+  { id: 'ponytail2', displayName: 'Ponytail Alt', hasBackLayer: false },
+  { id: 'braid', displayName: 'Braid', hasBackLayer: false },
+  { id: 'idol', displayName: 'Idol', hasBackLayer: false },
+  { id: 'shoulderl', displayName: 'Shoulder Left', hasBackLayer: false },
+  { id: 'shoulderr', displayName: 'Shoulder Right', hasBackLayer: false },
+
+  // Long styles
+  { id: 'long', displayName: 'Long', hasBackLayer: false },
+  { id: 'long_straight', displayName: 'Long Straight', hasBackLayer: false },
+  { id: 'long_messy', displayName: 'Long Messy', hasBackLayer: false },
+  { id: 'curly_long', displayName: 'Long Curly', hasBackLayer: false },
+  { id: 'wavy', displayName: 'Wavy', hasBackLayer: false },
+  { id: 'princess', displayName: 'Princess', hasBackLayer: false },
+  { id: 'high_ponytail', displayName: 'High Ponytail', hasBackLayer: false },
+  { id: 'pigtails', displayName: 'Pigtails', hasBackLayer: false },
+
+  // Textured
   { id: 'afro', displayName: 'Afro', hasBackLayer: false },
-  { id: 'bob', displayName: 'Bob', hasBackLayer: false },
+  { id: 'dreadlocks_long', displayName: 'Dreadlocks', hasBackLayer: false },
+
+  // Special
+  { id: 'bald', displayName: 'Bald', hasBackLayer: false },
 ];
 
 // ============================================================================
@@ -85,10 +121,12 @@ export interface ClothingTopOption {
 
 export const TOPS: ClothingTopOption[] = [
   { id: 'tshirt', displayName: 'T-Shirt' },
+  { id: 'tanktop', displayName: 'Tank Top' },
+  { id: 'sleeveless', displayName: 'Sleeveless' },
+  { id: 'longsleeve', displayName: 'Long Sleeve' },
   { id: 'hoodie', displayName: 'Hoodie' },
   { id: 'jacket', displayName: 'Jacket' },
   { id: 'dress', displayName: 'Dress' },
-  { id: 'tanktop', displayName: 'Tank Top' },
   { id: 'suit', displayName: 'Suit' },
 ];
 
@@ -102,10 +140,13 @@ export interface ClothingBottomOption {
 }
 
 export const BOTTOMS: ClothingBottomOption[] = [
+  { id: 'pants', displayName: 'Pants' },
+  { id: 'pants_formal', displayName: 'Formal Pants' },
   { id: 'jeans', displayName: 'Jeans' },
   { id: 'shorts', displayName: 'Shorts' },
   { id: 'skirt', displayName: 'Skirt' },
-  { id: 'pants', displayName: 'Pants' },
+  { id: 'leggings', displayName: 'Leggings' },
+  { id: 'pantaloons', displayName: 'Pantaloons' },
   { id: 'sweatpants', displayName: 'Sweatpants' },
 ];
 
@@ -119,30 +160,73 @@ export interface ShoesOption {
 }
 
 export const SHOES: ShoesOption[] = [
+  { id: 'shoes', displayName: 'Shoes' },
+  { id: 'shoes2', displayName: 'Shoes Alt' },
   { id: 'sneakers', displayName: 'Sneakers' },
   { id: 'boots', displayName: 'Boots' },
+  { id: 'boots2', displayName: 'Boots Alt' },
   { id: 'sandals', displayName: 'Sandals' },
+  { id: 'slippers', displayName: 'Slippers' },
   { id: 'dress_shoes', displayName: 'Dress Shoes' },
 ];
 
 // ============================================================================
-// Accessories
+// Accessories (Glasses & Hats)
 // ============================================================================
 
 export interface AccessoryOption {
   id: AccessoryType;
   displayName: string;
+  category: 'glasses' | 'hat';
 }
 
-// NOTE: No accessory assets exist yet - public/assets/avatars/accessories/ is empty
-// Add accessories here when assets are available
 export const ACCESSORIES: AccessoryOption[] = [
-  // { id: 'glasses', displayName: 'Glasses' },
-  // { id: 'hat_cap', displayName: 'Cap' },
-  // { id: 'hat_beanie', displayName: 'Beanie' },
-  // { id: 'earrings', displayName: 'Earrings' },
-  // { id: 'necklace', displayName: 'Necklace' },
-  // { id: 'mask', displayName: 'Mask' },
+  // Glasses
+  { id: 'glasses', displayName: 'Glasses', category: 'glasses' },
+  { id: 'glasses_round', displayName: 'Round Glasses', category: 'glasses' },
+  { id: 'glasses_nerd', displayName: 'Nerd Glasses', category: 'glasses' },
+  { id: 'sunglasses', displayName: 'Sunglasses', category: 'glasses' },
+  { id: 'shades', displayName: 'Shades', category: 'glasses' },
+  // Hats
+  { id: 'hat_bandana', displayName: 'Bandana', category: 'hat' },
+  { id: 'hat_hood', displayName: 'Hood', category: 'hat' },
+  { id: 'hat_tophat', displayName: 'Top Hat', category: 'hat' },
+  { id: 'hat_bowler', displayName: 'Bowler Hat', category: 'hat' },
+];
+
+// ============================================================================
+// Beards
+// ============================================================================
+
+export interface BeardOption {
+  id: BeardStyle;
+  displayName: string;
+}
+
+export const BEARDS: BeardOption[] = [
+  { id: 'none', displayName: 'None' },
+  { id: 'beard_basic', displayName: 'Basic Beard' },
+  { id: 'beard_medium', displayName: 'Medium Beard' },
+  { id: 'beard_trimmed', displayName: 'Trimmed Beard' },
+  { id: 'beard_full', displayName: 'Full Beard' },
+  { id: 'mustache_basic', displayName: 'Mustache' },
+];
+
+// ============================================================================
+// Eyes
+// ============================================================================
+
+export interface EyeColorOption {
+  id: EyeColor;
+  displayName: string;
+  hex: string;
+}
+
+export const EYE_COLORS: EyeColorOption[] = [
+  { id: 'blue', displayName: 'Blue', hex: '#4169E1' },
+  { id: 'brown', displayName: 'Brown', hex: '#8B4513' },
+  { id: 'green', displayName: 'Green', hex: '#228B22' },
+  { id: 'gray', displayName: 'Gray', hex: '#708090' },
 ];
 
 // ============================================================================
@@ -189,6 +273,8 @@ export interface AvatarManifest {
   bottoms: ClothingBottomOption[];
   shoes: ShoesOption[];
   accessories: AccessoryOption[];
+  beards: BeardOption[];
+  eyeColors: EyeColorOption[];
   hairColors: string[];
   clothingColors: string[];
 }
@@ -206,6 +292,8 @@ export function getAvailableOptions(): AvatarManifest {
     bottoms: BOTTOMS,
     shoes: SHOES,
     accessories: ACCESSORIES,
+    beards: BEARDS,
+    eyeColors: EYE_COLORS,
     hairColors: HAIR_COLORS,
     clothingColors: CLOTHING_COLORS,
   };
@@ -234,6 +322,8 @@ export default {
   BOTTOMS,
   SHOES,
   ACCESSORIES,
+  BEARDS,
+  EYE_COLORS,
   HAIR_COLORS,
   CLOTHING_COLORS,
   getAvailableOptions,

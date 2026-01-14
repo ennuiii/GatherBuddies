@@ -32,14 +32,39 @@ class AvatarStorageService {
   private sanitizeConfig(config: AvatarConfig): AvatarConfig {
     let modified = false;
 
-    // Fix invalid skin tone (e.g., 'fair' which only exists for neutral body)
+    // Fix invalid skin tone
     if (!VALID_SKIN_TONES.has(config.body.skinTone)) {
       console.warn(`[AvatarStorage] Invalid skin tone '${config.body.skinTone}', defaulting to 'light'`);
       config.body.skinTone = 'light' as SkinTone;
       modified = true;
     }
 
-    // Remove invalid accessories (none exist yet)
+    // Fix old body types (neutral -> male, masculine -> male, feminine -> female)
+    const bodyType = config.body.type as string;
+    if (bodyType === 'neutral' || bodyType === 'masculine') {
+      console.warn(`[AvatarStorage] Migrating body type '${bodyType}' to 'male'`);
+      config.body.type = 'male';
+      modified = true;
+    } else if (bodyType === 'feminine') {
+      console.warn(`[AvatarStorage] Migrating body type '${bodyType}' to 'female'`);
+      config.body.type = 'female';
+      modified = true;
+    }
+
+    // Fix old skin tones (tan -> bronze, dark -> brown, fair -> light)
+    const skinTone = config.body.skinTone as string;
+    if (skinTone === 'tan') {
+      config.body.skinTone = 'bronze';
+      modified = true;
+    } else if (skinTone === 'dark') {
+      config.body.skinTone = 'brown';
+      modified = true;
+    } else if (skinTone === 'fair') {
+      config.body.skinTone = 'light';
+      modified = true;
+    }
+
+    // Remove invalid accessories
     if (config.accessories && config.accessories.length > 0) {
       const validAccessories = config.accessories.filter(a => VALID_ACCESSORIES.has(a.type));
       if (validAccessories.length !== config.accessories.length) {
