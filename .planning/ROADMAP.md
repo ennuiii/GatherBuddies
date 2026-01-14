@@ -35,15 +35,15 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 Plans:
 - [x] 04-01: Asset manifest + OtherPlayer composition + live updates
 
-#### Phase 5: Avatar Editor UI
+#### Phase 5: Avatar Editor UI ✓
 
 **Goal**: Phaser-based customization scene with category tabs and live preview
 **Depends on**: Phase 4
 **Research**: Unlikely (following existing CharacterSelect pattern)
-**Status**: Planned
+**Status**: Complete (2026-01-14)
 
 Plans:
-- [ ] 05-01: AvatarEditorScene with tabs, live preview, and game integration
+- [x] 05-01: AvatarEditorScene with tabs, live preview, and game integration
 
 #### Phase 6: First-Join & Persistence
 
@@ -64,7 +64,7 @@ Plans:
 | 2. Social Features | v1.0 | 6/6 | Complete | 2026-01-13 |
 | 3. Game Integration | v1.0 | 2/2 | Complete | 2026-01-14 |
 | 4. LPC Asset Integration | v1.1 | 1/1 | Complete | 2026-01-14 |
-| 5. Avatar Editor UI | v1.1 | 0/1 | Planned | - |
+| 5. Avatar Editor UI | v1.1 | 1/1 | Complete | 2026-01-14 |
 | 6. First-Join & Persistence | v1.1 | 0/? | Not started | - |
 
 ## Notes

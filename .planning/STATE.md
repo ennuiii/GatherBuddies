@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-14)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** v1.1 Avatar Customization — Phase 4 (LPC Asset Integration)
+**Current focus:** v1.1 Avatar Customization — Phase 5 (Avatar Editor UI)
 
 ## Current Position
 
-Phase: 4 of 6 (LPC Asset Integration)
+Phase: 5 of 6 (Avatar Editor UI)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-01-14 — Completed 04-01-PLAN.md
+Last activity: 2026-01-14 — Completed 05-01-PLAN.md
 
-Progress: ███░░░░░░░ 33% (1 of 3 phases complete)
+Progress: ██████░░░░ 67% (2 of 3 phases complete)
 
 ## v1.1 Scope
 
@@ -37,12 +37,14 @@ Progress: ███░░░░░░░ 33% (1 of 3 phases complete)
 | 4 | Placeholder-then-swap pattern for OtherPlayer | Prevents blocking player join on async avatar loading |
 | 4 | Event-based character updates | Allows Game.ts to handle async composition without coupling |
 | 4 | AvatarManifest as source of truth | Centralizes all avatar options, avatar.ts re-exports for compatibility |
+| 5 | C key for editor (not E) | E already used for chair/cabinet interactions |
+| 5 | Scene overlay pattern | Editor launches as overlay to preserve game state |
 
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: Phase 4 complete
-Resume: Ready for Phase 5 planning with /gsd:plan-phase 5
+Stopped at: Phase 5 complete
+Resume: Ready for Phase 6 planning with /gsd:plan-phase 6
 
 ## Roadmap Evolution
 
