@@ -12,6 +12,7 @@
 
 import Phaser from 'phaser';
 import type { AvatarConfig, BodyType } from '../types/avatar';
+import { getLpcHairColor } from './AvatarManifest';
 
 // Get base URL for assets (handles /hub/ prefix in production)
 const getBaseUrl = () => import.meta.env.BASE_URL || '/';
@@ -269,9 +270,10 @@ class AvatarAssetLoaderService {
       keys.push(`eyes_${config.eyes.color}`);
     }
 
-    // Hair (if not bald)
+    // Hair (if not bald) - use actual color from LPC sprites
     if (config.hair.style !== 'bald') {
-      keys.push(`hair_${config.hair.style}_${DEFAULT_HAIR_COLOR}`);
+      const hairColor = getLpcHairColor(config.hair.color);
+      keys.push(`hair_${config.hair.style}_${hairColor}`);
     }
 
     // Beard

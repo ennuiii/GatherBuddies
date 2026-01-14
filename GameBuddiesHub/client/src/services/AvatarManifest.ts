@@ -93,7 +93,7 @@ export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'idol', displayName: 'Idol', hasBackLayer: false },
   { id: 'shoulderl', displayName: 'Shoulder Left', hasBackLayer: false },
   { id: 'shoulderr', displayName: 'Shoulder Right', hasBackLayer: false },
-  { id: 'messy', displayName: 'Messy', hasBackLayer: false },
+  { id: 'messy1', displayName: 'Messy', hasBackLayer: false },
   { id: 'page', displayName: 'Page', hasBackLayer: false },
 
   // Long styles
@@ -116,7 +116,6 @@ export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'natural', displayName: 'Natural', hasBackLayer: false },
 
   // Special
-  { id: 'bald', displayName: 'Bald', hasBackLayer: false },
   { id: 'balding', displayName: 'Balding', hasBackLayer: false },
 ];
 
@@ -243,18 +242,74 @@ export const EYE_COLORS: EyeColorOption[] = [
 // Color Palettes
 // ============================================================================
 
-export const HAIR_COLORS: string[] = [
-  '#000000', // Black
-  '#4A3728', // Dark Brown
-  '#8B4513', // Brown
-  '#D2691E', // Light Brown
-  '#FFD700', // Blonde
-  '#FF6347', // Red
-  '#FF69B4', // Pink
-  '#9370DB', // Purple
-  '#87CEEB', // Blue
-  '#FFFFFF', // White/Gray
+/**
+ * Hair color options with hex values and LPC sprite file names.
+ * LPC has pre-colored sprites for each color - we load the matching file.
+ */
+export interface HairColorOption {
+  hex: string;
+  lpcName: string; // Filename in LPC assets (without .png)
+  displayName: string;
+}
+
+export const HAIR_COLOR_OPTIONS: HairColorOption[] = [
+  { hex: '#000000', lpcName: 'black', displayName: 'Black' },
+  { hex: '#1a1a2e', lpcName: 'raven', displayName: 'Raven' },
+  { hex: '#4A3728', lpcName: 'dark_brown', displayName: 'Dark Brown' },
+  { hex: '#8B4513', lpcName: 'chestnut', displayName: 'Chestnut' },
+  { hex: '#A0522D', lpcName: 'light_brown', displayName: 'Light Brown' },
+  { hex: '#D2691E', lpcName: 'ginger', displayName: 'Ginger' },
+  { hex: '#F4A460', lpcName: 'sandy', displayName: 'Sandy' },
+  { hex: '#FFD700', lpcName: 'blonde', displayName: 'Blonde' },
+  { hex: '#FFFACD', lpcName: 'platinum', displayName: 'Platinum' },
+  { hex: '#FF6347', lpcName: 'red', displayName: 'Red' },
+  { hex: '#FFA500', lpcName: 'orange', displayName: 'Orange' },
+  { hex: '#FF4500', lpcName: 'carrot', displayName: 'Carrot' },
+  { hex: '#FF69B4', lpcName: 'pink', displayName: 'Pink' },
+  { hex: '#FFB6C1', lpcName: 'rose', displayName: 'Rose' },
+  { hex: '#9370DB', lpcName: 'purple', displayName: 'Purple' },
+  { hex: '#8A2BE2', lpcName: 'violet', displayName: 'Violet' },
+  { hex: '#4169E1', lpcName: 'blue', displayName: 'Blue' },
+  { hex: '#000080', lpcName: 'navy', displayName: 'Navy' },
+  { hex: '#228B22', lpcName: 'green', displayName: 'Green' },
+  { hex: '#FFD700', lpcName: 'gold', displayName: 'Gold' },
+  { hex: '#808080', lpcName: 'gray', displayName: 'Gray' },
+  { hex: '#A9A9A9', lpcName: 'dark_gray', displayName: 'Dark Gray' },
+  { hex: '#FFFFFF', lpcName: 'white', displayName: 'White' },
 ];
+
+// Legacy array for backward compatibility
+export const HAIR_COLORS: string[] = HAIR_COLOR_OPTIONS.map(c => c.hex);
+
+/**
+ * Get LPC color name from hex color.
+ * Returns closest match if exact match not found.
+ */
+export function getLpcHairColor(hex: string): string {
+  const option = HAIR_COLOR_OPTIONS.find(c => c.hex.toLowerCase() === hex.toLowerCase());
+  if (option) return option.lpcName;
+
+  // Fallback: find closest color by comparing RGB values
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  let closest = HAIR_COLOR_OPTIONS[0];
+  let minDist = Infinity;
+
+  for (const opt of HAIR_COLOR_OPTIONS) {
+    const or = parseInt(opt.hex.slice(1, 3), 16);
+    const og = parseInt(opt.hex.slice(3, 5), 16);
+    const ob = parseInt(opt.hex.slice(5, 7), 16);
+    const dist = Math.sqrt((r - or) ** 2 + (g - og) ** 2 + (b - ob) ** 2);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = opt;
+    }
+  }
+
+  return closest.lpcName;
+}
 
 export const CLOTHING_COLORS: string[] = [
   '#3B82F6', // Blue

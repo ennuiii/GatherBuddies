@@ -8,7 +8,7 @@
 
 import Phaser from 'phaser';
 import type { AvatarConfig, SkinTone } from '../types/avatar';
-import { HAIR_STYLES, SKIN_TONES } from './AvatarManifest';
+import { HAIR_STYLES, SKIN_TONES, getLpcHairColor } from './AvatarManifest';
 import { avatarAssetLoader, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT, LPC_COLS, LPC_ROWS } from './AvatarAssetLoader';
 
 // Layer rendering order (bottom to top)
@@ -120,21 +120,23 @@ class AvatarCompositorService {
     });
 
     // Hair - key format: hair_{style}_{color}_{bodyType}
+    // LPC has pre-colored sprites, so we load the matching color file (no tinting needed)
     if (config.hair.style !== 'bald') {
       const hairInfo = HAIR_STYLES.find(h => h.id === config.hair.style);
+      const hairColor = getLpcHairColor(config.hair.color);
 
       // Back layer for some hair styles
       if (hairInfo?.hasBackLayer) {
         layers.set('hair_back', {
-          textureKey: `hair_${config.hair.style}_back_${DEFAULT_HAIR_COLOR}_${bodyType}`,
-          tint: this.hexToInt(config.hair.color),
+          textureKey: `hair_${config.hair.style}_back_${hairColor}_${bodyType}`,
+          // No tint - LPC sprites are pre-colored
         });
       }
 
       // Front layer (main hair)
       layers.set('hair_front', {
-        textureKey: `hair_${config.hair.style}_${DEFAULT_HAIR_COLOR}_${bodyType}`,
-        tint: this.hexToInt(config.hair.color),
+        textureKey: `hair_${config.hair.style}_${hairColor}_${bodyType}`,
+        // No tint - LPC sprites are pre-colored
       });
     }
 
@@ -190,6 +192,28 @@ class AvatarCompositorService {
   }
 
   /**
+   * Map extended LPC rows to standard LPC rows for sprites that don't have extended animations.
+   * Standard LPC has 21 rows (walk at rows 8-11).
+   * Extended LPC has 46 rows (adds idle at 22-25, sit at 30-33, run at 34-37).
+   *
+   * For sprites with only 21 rows, we map extended rows back to walk rows.
+   */
+  private getFallbackRow(row: number, maxRows: number): number {
+    if (row < maxRows) return row;
+
+    // Map extended animation rows to walk animation rows
+    // Idle rows 22-25 -> Walk rows 8-11
+    if (row >= 22 && row <= 25) return row - 14; // 22->8, 23->9, 24->10, 25->11
+    // Sit rows 30-33 -> Walk rows 8-11
+    if (row >= 30 && row <= 33) return row - 22; // 30->8, 31->9, 32->10, 33->11
+    // Run rows 34-37 -> Walk rows 8-11
+    if (row >= 34 && row <= 37) return row - 26; // 34->8, 35->9, 36->10, 37->11
+
+    // For any other row beyond sprite's height, use walk down (row 10)
+    return Math.min(row % maxRows, 10);
+  }
+
+  /**
    * Compose a single frame from multiple layers
    */
   private composeFrame(
@@ -199,9 +223,6 @@ class AvatarCompositorService {
     row: number
   ): void {
     const srcX = col * LPC_FRAME_WIDTH;
-    const srcY = row * LPC_FRAME_HEIGHT;
-
-    let missingTextures: string[] = [];
 
     for (const layerName of LAYER_ORDER) {
       const layer = layers.get(layerName);
@@ -210,16 +231,19 @@ class AvatarCompositorService {
       const texture = avatarAssetLoader.getTexture(layer.textureKey);
       if (!texture) {
         console.error(`[AvatarCompositor] Missing texture: ${layer.textureKey}`);
-        missingTextures.push(layer.textureKey);
         continue;
       }
 
       const source = texture.getSourceImage() as HTMLImageElement;
       if (!source || !source.complete) {
         console.error(`[AvatarCompositor] Texture not ready: ${layer.textureKey}`);
-        missingTextures.push(layer.textureKey);
         continue;
       }
+
+      // Check if this sprite has the requested row, if not use fallback
+      const spriteRows = Math.floor(source.height / LPC_FRAME_HEIGHT);
+      const actualRow = this.getFallbackRow(row, spriteRows);
+      const srcY = actualRow * LPC_FRAME_HEIGHT;
 
       if (layer.tint) {
         // Create temp canvas for this frame
