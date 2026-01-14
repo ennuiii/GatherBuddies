@@ -60,12 +60,25 @@ export default class OtherPlayer extends Player {
     }
   }
 
+  // Track current character config for change detection
+  private currentCharacter: string = '';
+
   // Update from full player state
-  updateFromState(player: { name: string; x: number; y: number; anim: string }) {
+  updateFromState(player: { name: string; x: number; y: number; anim: string; character?: string }) {
     if (player.name) this.playerName.setText(player.name);
     this.targetPosition[0] = player.x;
     this.targetPosition[1] = player.y;
     if (player.anim) this.anims.play(player.anim, true);
+
+    // Check if character changed (for live avatar updates)
+    if (player.character && player.character !== this.currentCharacter) {
+      this.currentCharacter = player.character;
+      // Emit event for Game scene to handle async composition
+      phaserEvents.emit('otherPlayer:characterChanged', {
+        playerId: this.playerId,
+        character: player.character,
+      });
+    }
   }
 
   /**

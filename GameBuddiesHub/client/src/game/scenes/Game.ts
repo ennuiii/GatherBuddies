@@ -222,7 +222,30 @@ export default class Game extends Phaser.Scene {
     // Listen for avatar selection from React AvatarEditor
     phaserEvents.on('avatar:selectionComplete', this.handleAvatarSelected, this);
     phaserEvents.on('avatar:updated', this.handleAvatarUpdated, this);
+
+    // Listen for other player character changes (for live avatar updates)
+    phaserEvents.on('otherPlayer:characterChanged', this.handleOtherPlayerCharacterChanged, this);
   }
+
+  /**
+   * Handle character change for other players (live avatar updates)
+   */
+  private handleOtherPlayerCharacterChanged = async (data: { playerId: string; character: string }) => {
+    const otherPlayer = this.otherPlayerMap.get(data.playerId);
+    if (!otherPlayer) {
+      console.log('[Game] Character changed for unknown player:', data.playerId);
+      return;
+    }
+
+    // Check if it's a JSON avatar config
+    if (data.character.startsWith('{')) {
+      // Compose avatar for the other player
+      await this.composeOtherPlayerAvatar(otherPlayer, data.character);
+    } else {
+      // Legacy character key - update texture directly
+      otherPlayer.updateTexture(data.character);
+    }
+  };
 
   // Handle avatar selection from React UI
   private handleAvatarSelected = async (config: AvatarConfig) => {
@@ -248,11 +271,28 @@ export default class Game extends Phaser.Scene {
     }
   };
 
-  // Handle avatar update (for future live preview)
-  private handleAvatarUpdated = (config: AvatarConfig) => {
+  // Handle avatar update (for live preview and avatar changes)
+  private handleAvatarUpdated = async (config: AvatarConfig) => {
     console.log('[Game] Avatar updated:', config);
     this.avatarConfig = config;
-    // TODO: Update existing player sprite if already spawned
+
+    // Update existing player sprite if already spawned
+    if (this.myPlayer) {
+      try {
+        // Compose new avatar texture
+        const textureKey = await avatarCompositor.composeAvatar(config);
+        avatarCompositor.createAnimations(textureKey);
+
+        // Swap texture on player sprite
+        this.myPlayer.updateTexture(textureKey);
+        console.log('[Game] MyPlayer texture updated to:', textureKey);
+
+        // Send updated config to server for other players
+        this.room.send(6, { character: JSON.stringify(config) }); // HubMessage.UPDATE_CHARACTER = 6
+      } catch (error) {
+        console.error('[Game] Failed to update avatar:', error);
+      }
+    }
   };
 
   private setupColyseusListeners() {

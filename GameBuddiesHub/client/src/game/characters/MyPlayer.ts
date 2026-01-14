@@ -56,6 +56,36 @@ export default class MyPlayer extends Player {
     this.playerName.setText(name);
   }
 
+  /**
+   * Update the player's texture (for avatar composition).
+   * Swaps to new texture and updates current animation.
+   */
+  updateTexture(textureKey: string) {
+    // Get current animation direction
+    const currentAnim = this.anims.currentAnim?.key;
+    let direction = 'down';
+    let action = 'idle';
+
+    if (currentAnim) {
+      // Parse direction and action from animation key (e.g., "adam_idle_down" -> "idle", "down")
+      const parts = currentAnim.split('_');
+      if (parts.length >= 3) {
+        action = parts[1];
+        direction = parts[parts.length - 1];
+      }
+    }
+
+    // Update texture reference
+    this.playerTexture = textureKey;
+    this.setTexture(textureKey);
+
+    // Play animation with new texture
+    const newAnim = `${textureKey}_${action}_${direction}`;
+    if (this.scene.anims.exists(newAnim)) {
+      this.anims.play(newAnim, true);
+    }
+  }
+
   update(
     cursors: NavKeys,
     keyE?: Phaser.Input.Keyboard.Key,
