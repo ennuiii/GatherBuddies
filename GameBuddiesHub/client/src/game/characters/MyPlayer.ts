@@ -67,11 +67,13 @@ export default class MyPlayer extends Player {
     let action = 'idle';
 
     if (currentAnim) {
-      // Parse direction and action from animation key (e.g., "adam_idle_down" -> "idle", "down")
+      // Parse direction and action from animation key (e.g., "avatar_123_abc_idle_down")
+      // Format: {textureKey}_{action}_{direction} where textureKey can contain underscores
       const parts = currentAnim.split('_');
       if (parts.length >= 3) {
-        action = parts[1];
+        // Direction is always last, action is second-to-last
         direction = parts[parts.length - 1];
+        action = parts[parts.length - 2];
       }
     }
 

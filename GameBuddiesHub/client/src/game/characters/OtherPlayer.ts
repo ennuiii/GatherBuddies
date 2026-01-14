@@ -91,7 +91,8 @@ export default class OtherPlayer extends Player {
     let direction = 'down';
 
     if (currentAnim) {
-      // Parse direction from animation key (e.g., "adam_idle_down" -> "down")
+      // Parse direction from animation key (e.g., "avatar_123_abc_idle_down" -> "down")
+      // Format: {textureKey}_{action}_{direction} where textureKey can contain underscores
       const parts = currentAnim.split('_');
       if (parts.length >= 3) {
         direction = parts[parts.length - 1];

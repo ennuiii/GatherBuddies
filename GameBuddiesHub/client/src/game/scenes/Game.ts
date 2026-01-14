@@ -25,7 +25,7 @@ import ArcadeCabinet from '../items/ArcadeCabinet';
 import Chair from '../items/Chair';
 import PlayerSelector from '../items/PlayerSelector';
 import { calculateDistanceInTiles, PROXIMITY } from '../../config/proximityConfig';
-import type { AvatarConfig } from '../../types/avatar';
+import { type AvatarConfig, DEFAULT_AVATAR_CONFIG } from '../../types/avatar';
 import { avatarStorage } from '../../services/AvatarStorage';
 import { avatarCompositor } from '../../services/AvatarCompositor';
 import { avatarAssetLoader } from '../../services/AvatarAssetLoader';
@@ -50,20 +50,6 @@ interface PlayerState {
   character?: string; // Legacy key or JSON avatar config
 }
 
-// Character info for selection UI
-interface CharacterInfo {
-  key: string;
-  name: string;
-  description: string;
-}
-
-const CHARACTERS: CharacterInfo[] = [
-  { key: 'adam', name: 'Adam', description: 'The friendly explorer. Always ready for adventure!' },
-  { key: 'ash', name: 'Ash', description: 'Cool and collected. Natural born leader.' },
-  { key: 'lucy', name: 'Lucy', description: 'Creative spirit. Brings joy wherever she goes!' },
-  { key: 'nancy', name: 'Nancy', description: 'Strategic thinker. Always has a plan.' },
-];
-
 export default class Game extends Phaser.Scene {
   private room!: Room;
   private cursors!: NavKeys;
@@ -84,18 +70,12 @@ export default class Game extends Phaser.Scene {
   private playerSelector!: PlayerSelector;
   private chairGroup!: Phaser.Physics.Arcade.StaticGroup;
   private cabinetGroup!: Phaser.Physics.Arcade.StaticGroup;
-  private selectedCharacter: string = 'adam';
 
-  // Character selection UI state
-  private characterSelectContainer!: Phaser.GameObjects.Container;
-  private characterSelected: boolean = false;
-  private selectionIndex: number = 0;
-  private selectionCards: Phaser.GameObjects.Container[] = [];
+  // Player spawn data (stored while avatar editor is open)
   private pendingPlayerData: { player: PlayerState; sessionId: string } | null = null;
 
   // Avatar customization state
   private avatarConfig: AvatarConfig | null = null;
-  private useAvatarSystem: boolean = false;
 
   // Debug mode for positioning objects
   private debugMode: boolean = false;
@@ -115,18 +95,12 @@ export default class Game extends Phaser.Scene {
   init() {
     // Get player name from registry (set by PhaserGame component)
     this.playerName = this.registry.get('playerName') || 'Player';
-    // Reset selection state for new game
-    this.characterSelected = false;
-    this.selectionIndex = 0;
-    this.selectedCharacter = 'adam';
+    // Reset state for new game
     this.pendingPlayerData = null;
-
-    // Check if avatar system is available (assets loaded)
-    this.useAvatarSystem = avatarAssetLoader.isInitialized();
-    console.log('[Game] Avatar system available:', this.useAvatarSystem);
 
     // Load saved avatar config
     this.avatarConfig = avatarStorage.load();
+    console.log('[Game] Avatar system ready, saved config:', this.avatarConfig ? 'found' : 'none');
   }
 
   registerKeys() {
@@ -265,26 +239,13 @@ export default class Game extends Phaser.Scene {
     }
   };
 
-  // Handle avatar selection from React UI
+  // Handle avatar selection from React UI (legacy - kept for backward compatibility with useAvatar hook)
   private handleAvatarSelected = async (config: AvatarConfig) => {
-    console.log('[Game] Avatar selected:', config);
+    console.log('[Game] Avatar selected (via event):', config);
     this.avatarConfig = config;
 
-    // If we have pending player data and were waiting for selection, spawn now
-    if (this.pendingPlayerData && !this.characterSelected) {
-      this.characterSelected = true;
-
-      // Remove keyboard listeners for selection
-      this.input.keyboard!.off('keydown-LEFT', this.selectPreviousCharacter, this);
-      this.input.keyboard!.off('keydown-RIGHT', this.selectNextCharacter, this);
-      this.input.keyboard!.off('keydown-ENTER', this.confirmCharacterSelection, this);
-      this.input.keyboard!.off('keydown-SPACE', this.confirmCharacterSelection, this);
-
-      // Destroy character selection UI if it exists
-      if (this.characterSelectContainer) {
-        this.characterSelectContainer.destroy();
-      }
-
+    // If we have pending player data, spawn now
+    if (this.pendingPlayerData && !this.myPlayer) {
       await this.spawnWithAvatar();
     }
   };
@@ -351,6 +312,71 @@ export default class Game extends Phaser.Scene {
       config: currentConfig,
       onSave: this.handleAvatarEditorSave.bind(this),
     });
+  }
+
+  /**
+   * Launch avatar editor for first-time player spawn.
+   * Called when player joins the room instead of legacy character selection.
+   */
+  private launchAvatarEditorForSpawn() {
+    console.log('[Game] Launching avatar editor for first-time spawn');
+
+    // Check if player has saved avatar config
+    const savedConfig = avatarStorage.load();
+    const config = savedConfig || {
+      id: `avatar_${Date.now()}`,
+      body: { type: 'male' as const, skinTone: 'light' as const },
+      hair: { style: 'pixie' as const, color: '#4A3728' },
+      clothing: {
+        top: 'tshirt' as const,
+        topColor: '#3B82F6',
+        bottom: 'jeans' as const,
+        bottomColor: '#1E3A5F',
+        shoes: 'sneakers' as const,
+        shoesColor: '#FFFFFF',
+      },
+      accessories: [],
+      version: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Launch editor scene with first-time flag
+    this.scene.launch('avatarEditor', {
+      config,
+      isFirstTime: true,
+      onSave: this.handleFirstTimeAvatarSave.bind(this),
+      onQuickStart: this.handleQuickStart.bind(this),
+    });
+  }
+
+  /**
+   * Handle save from avatar editor when spawning for the first time.
+   * Spawns the player with the configured avatar.
+   */
+  private async handleFirstTimeAvatarSave(config: AvatarConfig) {
+    console.log('[Game] First-time avatar save:', config);
+
+    // Store config locally
+    this.avatarConfig = config;
+    avatarStorage.save(config);
+
+    // Spawn with the custom avatar
+    await this.spawnWithAvatar();
+  }
+
+  /**
+   * Handle quick start - spawn with default avatar immediately.
+   */
+  private async handleQuickStart(config: AvatarConfig) {
+    console.log('[Game] Quick start with default avatar');
+
+    // Store config locally
+    this.avatarConfig = config;
+    avatarStorage.save(config);
+
+    // Spawn with the default avatar
+    await this.spawnWithAvatar();
   }
 
   /**
@@ -423,9 +449,9 @@ export default class Game extends Phaser.Scene {
           return;
         }
 
-        // Store player data and show character selection
+        // Store player data and launch avatar editor for first-time setup
         this.pendingPlayerData = { player, sessionId };
-        this.showCharacterSelection();
+        this.launchAvatarEditorForSpawn();
       } else {
         // This is another player
         this.handlePlayerJoined(player, sessionId);
@@ -589,290 +615,19 @@ export default class Game extends Phaser.Scene {
     }
   }
 
-  // Character Selection UI Methods
-  private showCharacterSelection() {
-    const { width, height } = this.scale;
-
-    // Create container for all selection UI (fixed to camera)
-    this.characterSelectContainer = this.add.container(0, 0);
-    this.characterSelectContainer.setScrollFactor(0);
-    this.characterSelectContainer.setDepth(1000);
-
-    // Semi-transparent background overlay
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x1a1a2e, 0.92);
-    this.characterSelectContainer.add(overlay);
-
-    // Title
-    const title = this.add.text(width / 2, 60, 'Choose Your Character', {
-      fontSize: '28px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-    this.characterSelectContainer.add(title);
-
-    // Create character cards
-    const cardWidth = 150;
-    const cardHeight = 200;
-    const spacing = 16;
-    const totalWidth = CHARACTERS.length * cardWidth + (CHARACTERS.length - 1) * spacing;
-    const startX = (width - totalWidth) / 2 + cardWidth / 2;
-
-    this.selectionCards = [];
-    CHARACTERS.forEach((char, index) => {
-      const x = startX + index * (cardWidth + spacing);
-      const y = height / 2 - 10;
-      const card = this.createSelectionCard(x, y, cardWidth, cardHeight, char, index);
-      this.selectionCards.push(card);
-      this.characterSelectContainer.add(card);
-    });
-
-    // Highlight first card
-    this.highlightSelectionCard(0);
-
-    // Position button and instructions below the cards
-    const cardBottomY = height / 2 - 10 + 100 + 20; // card center + half height + padding
-
-    // Instructions
-    const instructions = this.add.text(width / 2, cardBottomY + 20, 'Click a character or use arrow keys, then press Enter', {
-      fontSize: '14px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#888888',
-    }).setOrigin(0.5);
-    this.characterSelectContainer.add(instructions);
-
-    // Button row
-    const btnY = cardBottomY + 60;
-
-    // Customize Avatar button (opens React modal)
-    const customizeBtnBg = this.add.rectangle(width / 2 - 100, btnY, 180, 45, 0x6366f1, 1)
-      .setStrokeStyle(2, 0x818cf8)
-      .setInteractive({ useHandCursor: true });
-    const customizeBtnText = this.add.text(width / 2 - 100, btnY, 'Customize Avatar', {
-      fontSize: '16px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-    customizeBtnBg.on('pointerdown', () => {
-      console.log('[Game] Customize Avatar clicked - opening editor');
-      phaserEvents.emit('avatar:openEditor');
-    });
-    customizeBtnBg.on('pointerover', () => customizeBtnBg.setFillStyle(0x818cf8));
-    customizeBtnBg.on('pointerout', () => customizeBtnBg.setFillStyle(0x6366f1));
-    this.characterSelectContainer.add([customizeBtnBg, customizeBtnText]);
-
-    // Confirm button - positioned to the right
-    const btnBg = this.add.rectangle(width / 2 + 100, btnY, 180, 45, 0x4caf50, 1)
-      .setStrokeStyle(2, 0x66bb6a)
-      .setInteractive({ useHandCursor: true });
-    const btnText = this.add.text(width / 2 + 100, btnY, 'Start Game', {
-      fontSize: '18px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-    btnBg.on('pointerdown', () => {
-      console.log('[Game] Start Game clicked');
-      this.confirmCharacterSelection();
-    });
-    btnBg.on('pointerover', () => btnBg.setFillStyle(0x66bb6a));
-    btnBg.on('pointerout', () => btnBg.setFillStyle(0x4caf50));
-    this.characterSelectContainer.add([btnBg, btnText]);
-
-    // Keyboard navigation for selection
-    this.input.keyboard!.on('keydown-LEFT', this.selectPreviousCharacter, this);
-    this.input.keyboard!.on('keydown-RIGHT', this.selectNextCharacter, this);
-    this.input.keyboard!.on('keydown-ENTER', this.confirmCharacterSelection, this);
-    this.input.keyboard!.on('keydown-SPACE', this.confirmCharacterSelection, this);
-  }
-
-  private createSelectionCard(
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    char: CharacterInfo,
-    index: number
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-
-    // Card background
-    const bg = this.add.rectangle(0, 0, w, h, 0x2d2d44, 1).setStrokeStyle(3, 0x3d3d5c);
-
-    // Character sprite with idle_down animation (front-facing)
-    const sprite = this.add.sprite(0, -35, char.key, 18); // Frame 18 = first frame of idle_down
-    sprite.setScale(2);
-    sprite.play(`${char.key}_idle_down`);
-
-    // Character name
-    const nameText = this.add.text(0, 38, char.name, {
-      fontSize: '16px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    // Description
-    const descText = this.add.text(0, 62, char.description, {
-      fontSize: '10px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#aaaaaa',
-      wordWrap: { width: w - 16 },
-      align: 'center',
-    }).setOrigin(0.5, 0);
-
-    container.add([bg, sprite, nameText, descText]);
-    container.setSize(w, h);
-    container.setData('bg', bg);
-    container.setData('index', index);
-
-    // Make card clickable
-    container.setInteractive({ useHandCursor: true });
-    container.on('pointerdown', () => this.highlightSelectionCard(index));
-    container.on('pointerover', () => {
-      if (this.selectionIndex !== index) {
-        bg.setStrokeStyle(3, 0x5d5d7c);
-      }
-    });
-    container.on('pointerout', () => {
-      if (this.selectionIndex !== index) {
-        bg.setStrokeStyle(3, 0x3d3d5c);
-      }
-    });
-
-    return container;
-  }
-
-  private highlightSelectionCard(index: number) {
-    // Unhighlight previous
-    if (this.selectionCards[this.selectionIndex]) {
-      const prevBg = this.selectionCards[this.selectionIndex].getData('bg') as Phaser.GameObjects.Rectangle;
-      prevBg.setStrokeStyle(3, 0x3d3d5c);
-      prevBg.setFillStyle(0x2d2d44);
-    }
-
-    // Highlight new
-    this.selectionIndex = index;
-    const bg = this.selectionCards[index].getData('bg') as Phaser.GameObjects.Rectangle;
-    bg.setStrokeStyle(3, 0x4caf50);
-    bg.setFillStyle(0x3d3d5c);
-  }
-
-  private selectPreviousCharacter() {
-    if (!this.characterSelected) {
-      const newIndex = (this.selectionIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
-      this.highlightSelectionCard(newIndex);
-    }
-  }
-
-  private selectNextCharacter() {
-    if (!this.characterSelected) {
-      const newIndex = (this.selectionIndex + 1) % CHARACTERS.length;
-      this.highlightSelectionCard(newIndex);
-    }
-  }
-
-  private confirmCharacterSelection() {
-    console.log('[Game] confirmCharacterSelection called, characterSelected:', this.characterSelected, 'pendingPlayerData:', !!this.pendingPlayerData);
-    if (this.characterSelected || !this.pendingPlayerData) {
-      console.log('[Game] Skipping - already selected or no pending data');
-      return;
-    }
-
-    this.characterSelected = true;
-    this.selectedCharacter = CHARACTERS[this.selectionIndex].key;
-    console.log('[Game] Character selected:', this.selectedCharacter);
-
-    // Remove keyboard listeners for selection
-    this.input.keyboard!.off('keydown-LEFT', this.selectPreviousCharacter, this);
-    this.input.keyboard!.off('keydown-RIGHT', this.selectNextCharacter, this);
-    this.input.keyboard!.off('keydown-ENTER', this.confirmCharacterSelection, this);
-    this.input.keyboard!.off('keydown-SPACE', this.confirmCharacterSelection, this);
-
-    // Destroy selection UI
-    this.characterSelectContainer.destroy();
-
-    // Spawn the player
-    this.spawnLocalPlayer();
-  }
-
-  private spawnLocalPlayer() {
-    if (!this.pendingPlayerData) return;
-
-    const { player, sessionId } = this.pendingPlayerData;
-    const spawnX = player.x || 705;
-    const spawnY = player.y || 500;
-
-    this.myPlayer = this.add.myPlayer(spawnX, spawnY, this.selectedCharacter, sessionId);
-    this.myPlayer.setPlayerName(this.playerName);
-
-    // Set camera to follow player
-    this.cameras.main.startFollow(this.myPlayer, true);
-
-    // Set up movement callback
-    this.myPlayer.onMovementUpdate = (data: { x: number; y: number; anim: string }) => {
-      this.room.send(0, data); // HubMessage.UPDATE_PLAYER = 0
-    };
-
-    // Send initial name to server
-    this.room.send(1, { name: this.playerName }); // HubMessage.UPDATE_PLAYER_NAME = 1
-
-    // Send character selection to server (legacy key)
-    this.room.send(6, { character: this.selectedCharacter }); // HubMessage.UPDATE_CHARACTER = 6
-
-    // Add collisions with ground
-    const groundLayer = this.map.getLayer('Ground')?.tilemapLayer;
-    if (groundLayer) {
-      this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], groundLayer);
-    }
-
-    // Add collisions with all stored collidable object groups
-    this.collidableGroups.forEach(group => {
-      this.physics.add.collider([this.myPlayer, this.myPlayer.playerContainer], group);
-    });
-    console.log('[Game] Added collisions with', this.collidableGroups.length, 'object groups');
-
-    // Add chair overlap detection
-    this.physics.add.overlap(
-      this.playerSelector,
-      this.chairGroup,
-      this.handleChairOverlap,
-      undefined,
-      this
-    );
-
-    // Add arcade cabinet overlap detection
-    this.physics.add.overlap(
-      this.playerSelector,
-      this.cabinetGroup,
-      this.handleCabinetOverlap,
-      undefined,
-      this
-    );
-
-    // Add proximity detection overlap
-    this.physics.add.overlap(
-      this.myPlayer,
-      this.otherPlayers,
-      this.handlePlayersOverlap,
-      undefined,
-      this
-    );
-
-    console.log('[Game] MyPlayer created at', spawnX, spawnY, 'with character', this.selectedCharacter);
-    this.pendingPlayerData = null;
-  }
-
   /**
    * Spawn player with custom avatar (using avatar compositor)
-   * Falls back to legacy character if composition fails
    */
   private async spawnWithAvatar() {
-    if (!this.pendingPlayerData || !this.avatarConfig) {
-      console.log('[Game] Cannot spawn - missing data');
-      this.spawnLocalPlayer(); // Fallback to legacy
+    if (!this.pendingPlayerData) {
+      console.error('[Game] Cannot spawn - missing pendingPlayerData');
       return;
+    }
+
+    // Use avatarConfig or DEFAULT_AVATAR_CONFIG
+    if (!this.avatarConfig) {
+      console.log('[Game] No avatar config, using default');
+      this.avatarConfig = { ...DEFAULT_AVATAR_CONFIG, id: `avatar_${Date.now()}` };
     }
 
     const { player, sessionId } = this.pendingPlayerData;
@@ -890,10 +645,17 @@ export default class Game extends Phaser.Scene {
       this.myPlayer.setPlayerName(this.playerName);
       console.log('[Game] MyPlayer created with custom avatar:', textureKey);
     } catch (error) {
-      console.error('[Game] Failed to compose avatar, falling back to legacy:', error);
-      // Fallback to default legacy character
-      this.selectedCharacter = 'adam';
-      this.myPlayer = this.add.myPlayer(spawnX, spawnY, this.selectedCharacter, sessionId);
+      console.error('[Game] Failed to compose avatar:', error);
+      // Create player with placeholder texture - better than crashing
+      const placeholderKey = '__avatar_error_placeholder__';
+      if (!this.textures.exists(placeholderKey)) {
+        const graphics = this.make.graphics({ add: false });
+        graphics.fillStyle(0xff0000, 0.5);
+        graphics.fillRect(0, 0, 32, 48);
+        graphics.generateTexture(placeholderKey, 32, 48);
+        graphics.destroy();
+      }
+      this.myPlayer = this.add.myPlayer(spawnX, spawnY, placeholderKey, sessionId);
       this.myPlayer.setPlayerName(this.playerName);
     }
 

@@ -47,6 +47,8 @@ const CATEGORIES: Category[] = [
 interface AvatarEditorSceneData {
   config: AvatarConfig;
   onSave?: (config: AvatarConfig) => void;
+  onQuickStart?: (config: AvatarConfig) => void;
+  isFirstTime?: boolean; // True when shown on game start (shows Quick Start)
 }
 
 export default class AvatarEditorScene extends Phaser.Scene {
@@ -62,6 +64,7 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private activeTab: CategoryId = 'body';
   private manifest!: AvatarManifest;
   private onSaveCallback?: (config: AvatarConfig) => void;
+  private onQuickStartCallback?: (config: AvatarConfig) => void;
 
   // Preview sprite
   private previewSprite!: Phaser.GameObjects.Sprite;
@@ -77,6 +80,9 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private readonly DIRECTIONS = ['down', 'left', 'right', 'up'];
   private directionTimer?: Phaser.Time.TimerEvent;
 
+  // First time mode (shows Quick Start button)
+  private isFirstTime: boolean = false;
+
   constructor() {
     super('avatarEditor');
   }
@@ -86,10 +92,13 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.originalConfig = data.config ? JSON.parse(JSON.stringify(data.config)) : JSON.parse(JSON.stringify(DEFAULT_AVATAR_CONFIG));
     this.currentConfig = JSON.parse(JSON.stringify(this.originalConfig));
     this.onSaveCallback = data.onSave;
+    this.onQuickStartCallback = data.onQuickStart;
     this.manifest = getAvailableOptions();
     this.activeTab = 'body';
     this.isComposing = false;
     this.pendingConfig = null;
+    this.isFirstTime = data.isFirstTime ?? false;
+    this.previewTextureKey = '';
   }
 
   create() {
@@ -596,8 +605,17 @@ export default class AvatarEditorScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.previewContainer.add(previewLabel);
 
-    // Placeholder sprite (will be replaced after composition)
-    this.previewSprite = this.add.sprite(0, -10, 'adam', 18);
+    // Create an empty sprite (texture will be set after composition)
+    // Using a generated 1x1 transparent texture as placeholder
+    const placeholderKey = '__avatar_placeholder__';
+    if (!this.textures.exists(placeholderKey)) {
+      const graphics = this.make.graphics({ add: false });
+      graphics.fillStyle(0x000000, 0);
+      graphics.fillRect(0, 0, 64, 64);
+      graphics.generateTexture(placeholderKey, 64, 64);
+      graphics.destroy();
+    }
+    this.previewSprite = this.add.sprite(0, -10, placeholderKey);
     this.previewSprite.setScale(3); // 3x scale for visibility
     this.previewContainer.add(this.previewSprite);
 
@@ -663,36 +681,96 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private createActionButtons() {
     const btnY = PANEL_HEIGHT / 2 - 40;
 
-    // Cancel button
-    const cancelBg = this.add.rectangle(-80, btnY, 120, 40, 0x555555, 1);
-    cancelBg.setStrokeStyle(2, 0x666666);
-    cancelBg.setInteractive({ useHandCursor: true });
-    cancelBg.on('pointerdown', () => this.handleCancel());
-    cancelBg.on('pointerover', () => cancelBg.setFillStyle(0x666666));
-    cancelBg.on('pointerout', () => cancelBg.setFillStyle(0x555555));
+    if (this.isFirstTime) {
+      // First time mode: Quick Start + Play buttons (no Cancel)
 
-    const cancelText = this.add.text(-80, btnY, 'Cancel', {
-      fontSize: '16px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-    }).setOrigin(0.5);
+      // Quick Start button (uses default avatar)
+      const quickStartBg = this.add.rectangle(-100, btnY, 140, 40, 0x2196f3, 1);
+      quickStartBg.setStrokeStyle(2, 0x42a5f5);
+      quickStartBg.setInteractive({ useHandCursor: true });
+      quickStartBg.on('pointerdown', () => this.handleQuickStart());
+      quickStartBg.on('pointerover', () => quickStartBg.setFillStyle(0x42a5f5));
+      quickStartBg.on('pointerout', () => quickStartBg.setFillStyle(0x2196f3));
 
-    // Save button
-    const saveBg = this.add.rectangle(80, btnY, 120, 40, 0x4caf50, 1);
-    saveBg.setStrokeStyle(2, 0x66bb6a);
-    saveBg.setInteractive({ useHandCursor: true });
-    saveBg.on('pointerdown', () => this.handleSave());
-    saveBg.on('pointerover', () => saveBg.setFillStyle(0x66bb6a));
-    saveBg.on('pointerout', () => saveBg.setFillStyle(0x4caf50));
+      const quickStartText = this.add.text(-100, btnY, 'Quick Start', {
+        fontSize: '16px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff',
+      }).setOrigin(0.5);
 
-    const saveText = this.add.text(80, btnY, 'Save', {
-      fontSize: '16px',
-      fontFamily: 'Arial, sans-serif',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
+      // Play button (uses customized avatar)
+      const playBg = this.add.rectangle(100, btnY, 140, 40, 0x4caf50, 1);
+      playBg.setStrokeStyle(2, 0x66bb6a);
+      playBg.setInteractive({ useHandCursor: true });
+      playBg.on('pointerdown', () => this.handleSave());
+      playBg.on('pointerover', () => playBg.setFillStyle(0x66bb6a));
+      playBg.on('pointerout', () => playBg.setFillStyle(0x4caf50));
 
-    this.mainContainer.add([cancelBg, cancelText, saveBg, saveText]);
+      const playText = this.add.text(100, btnY, 'Play', {
+        fontSize: '16px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+
+      this.mainContainer.add([quickStartBg, quickStartText, playBg, playText]);
+    } else {
+      // Edit mode: Cancel + Save buttons
+
+      // Cancel button
+      const cancelBg = this.add.rectangle(-80, btnY, 120, 40, 0x555555, 1);
+      cancelBg.setStrokeStyle(2, 0x666666);
+      cancelBg.setInteractive({ useHandCursor: true });
+      cancelBg.on('pointerdown', () => this.handleCancel());
+      cancelBg.on('pointerover', () => cancelBg.setFillStyle(0x666666));
+      cancelBg.on('pointerout', () => cancelBg.setFillStyle(0x555555));
+
+      const cancelText = this.add.text(-80, btnY, 'Cancel', {
+        fontSize: '16px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff',
+      }).setOrigin(0.5);
+
+      // Save button
+      const saveBg = this.add.rectangle(80, btnY, 120, 40, 0x4caf50, 1);
+      saveBg.setStrokeStyle(2, 0x66bb6a);
+      saveBg.setInteractive({ useHandCursor: true });
+      saveBg.on('pointerdown', () => this.handleSave());
+      saveBg.on('pointerover', () => saveBg.setFillStyle(0x66bb6a));
+      saveBg.on('pointerout', () => saveBg.setFillStyle(0x4caf50));
+
+      const saveText = this.add.text(80, btnY, 'Save', {
+        fontSize: '16px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+
+      this.mainContainer.add([cancelBg, cancelText, saveBg, saveText]);
+    }
+  }
+
+  /**
+   * Quick Start - use default avatar without customization
+   */
+  private handleQuickStart() {
+    console.log('[AvatarEditor] Quick Start - using default avatar');
+
+    // Use the default config as-is
+    const defaultConfig = JSON.parse(JSON.stringify(DEFAULT_AVATAR_CONFIG));
+    defaultConfig.id = `avatar_${Date.now()}`;
+    defaultConfig.updatedAt = new Date().toISOString();
+
+    // Call quick start callback if available, otherwise fall back to save callback
+    if (this.onQuickStartCallback) {
+      this.onQuickStartCallback(defaultConfig);
+    } else if (this.onSaveCallback) {
+      this.onSaveCallback(defaultConfig);
+    }
+
+    // Clean up and close
+    this.cleanup();
+    this.scene.stop('avatarEditor');
   }
 
   /**
@@ -710,9 +788,14 @@ export default class AvatarEditorScene extends Phaser.Scene {
 
     // Show loading state
     const loadingText = this.previewContainer.getByName('loadingText') as Phaser.GameObjects.Text;
-    if (loadingText) loadingText.setVisible(true);
+    if (loadingText) {
+      loadingText.setText('Loading...');
+      loadingText.setColor('#666666');
+      loadingText.setVisible(true);
+    }
 
     try {
+      console.log('[AvatarEditor] Composing avatar with config:', this.currentConfig);
       const textureKey = await avatarCompositor.composeAvatar(this.currentConfig);
       avatarCompositor.createAnimations(textureKey);
 
@@ -723,14 +806,19 @@ export default class AvatarEditorScene extends Phaser.Scene {
       // Play idle animation in current direction
       this.playPreviewAnimation();
 
+      // Hide loading state on success
+      if (loadingText) loadingText.setVisible(false);
+
       console.log('[AvatarEditor] Preview updated:', textureKey);
     } catch (error) {
       console.error('[AvatarEditor] Failed to compose preview:', error);
-      // Keep current texture on error
+      // Show error message
+      if (loadingText) {
+        loadingText.setText('Error loading\nTry different options');
+        loadingText.setColor('#ff6666');
+        loadingText.setVisible(true);
+      }
     }
-
-    // Hide loading state
-    if (loadingText) loadingText.setVisible(false);
 
     this.isComposing = false;
 

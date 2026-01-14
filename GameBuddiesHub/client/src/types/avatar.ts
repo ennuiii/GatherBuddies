@@ -27,15 +27,20 @@ export {
 export type BodyType = 'male' | 'female' | 'muscular' | 'child' | 'teen';
 export type SkinTone = 'light' | 'olive' | 'bronze' | 'brown' | 'amber' | 'taupe' | 'black';
 
-// Hair options
+// Hair options (matching lpc/hair/* folder names)
 export type HairStyle =
-  | 'pixie' | 'bedhead' | 'bob' | 'cowlick' | 'short' | 'spiked' | 'mohawk'
-  | 'bangs' | 'bangs_long' | 'parted' | 'swoop' | 'curly' | 'ponytail' | 'ponytail2'
-  | 'braid' | 'idol' | 'shoulderl' | 'shoulderr'
+  // Short styles
+  | 'pixie' | 'bedhead' | 'bob' | 'cowlick' | 'spiked' | 'mohawk' | 'buzzcut' | 'flat_top_fade'
+  // Medium styles
+  | 'bangs' | 'bangslong' | 'parted' | 'swoop' | 'curly_short' | 'ponytail' | 'ponytail2'
+  | 'braid' | 'idol' | 'shoulderl' | 'shoulderr' | 'messy' | 'page'
+  // Long styles
   | 'long' | 'long_straight' | 'long_messy' | 'curly_long' | 'wavy' | 'princess'
-  | 'high_ponytail' | 'pigtails'
-  | 'afro' | 'dreadlocks_long'
-  | 'bald';
+  | 'high_ponytail' | 'pigtails' | 'xlong' | 'half_up'
+  // Textured styles
+  | 'afro' | 'dreadlocks_long' | 'dreadlocks_short' | 'cornrows' | 'natural'
+  // Special
+  | 'bald' | 'balding';
 
 // Clothing options
 export type ClothingTop = 'tshirt' | 'tanktop' | 'sleeveless' | 'longsleeve' | 'hoodie' | 'jacket' | 'dress' | 'suit';
@@ -109,7 +114,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
     skinTone: 'light',
   },
   hair: {
-    style: 'short',
+    style: 'pixie',
     color: '#4A3728',
   },
   clothing: {
@@ -184,16 +189,4 @@ export function generateRandomAvatar(): AvatarConfig {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-}
-
-/**
- * Legacy character names for backward compatibility
- */
-export type LegacyCharacter = 'adam' | 'ash' | 'lucy' | 'nancy';
-
-/**
- * Check if a value is a legacy character key
- */
-export function isLegacyCharacter(value: string): value is LegacyCharacter {
-  return ['adam', 'ash', 'lucy', 'nancy'].includes(value);
 }
