@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-01-14)
 
 Phase: 7 of 8 (LPC Reference Audit & Manifest Alignment)
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-14 — Milestone v1.2 created
+Status: Research complete, ready to plan
+Last activity: 2026-01-14 — Phase 7 research completed
 
 Progress: ░░░░░░░░░░ 0% (0 of 2 phases complete)
 
@@ -58,8 +58,20 @@ Progress: ░░░░░░░░░░ 0% (0 of 2 phases complete)
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: Milestone v1.2 initialization
-Resume: Run /gsd:plan-phase 7 to create first plan
+Stopped at: Phase 7 research complete
+Resume: Run /gsd:plan-phase 7 to create execution plan
+
+## Research Findings (v1.2)
+
+Key discoveries from Phase 7 research:
+
+1. **Root Cause**: Manifest only includes `tshirt` for tops, which only has female/teen assets
+2. **LPC Structure**: Sheet definitions have `layer_1` object with body type keys - presence/absence determines support
+3. **Extended Animations**: Items with `animations` array have idle/sit/run/walk; others only have walk
+4. **Male Tops Available**: `longsleeve`, `shortsleeve`, `sleeveless` have male assets but NO extended animations
+5. **Male Extended Tops**: Only `shortsleeve_polo` has male support WITH extended animations
+
+See: `.planning/phases/07-lpc-reference-audit/07-RESEARCH.md` for full analysis
 
 ## Roadmap Evolution
 
