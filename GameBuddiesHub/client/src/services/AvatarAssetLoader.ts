@@ -422,9 +422,12 @@ class AvatarAssetLoaderService {
     const topMappings: Record<string, string> = {
       'tshirt': tshirtPath,
       'shortsleeve': `torso/clothes/shortsleeve/shortsleeve/${mappedBodyType}`,
+      'shortsleeve_polo': `torso/clothes/shortsleeve/shortsleeve_polo/${mappedBodyType}`,
       'tanktop': `torso/clothes/sleeveless/sleeveless/${mappedBodyType}`,
       'sleeveless': `torso/clothes/sleeveless/sleeveless/${mappedBodyType}`,
+      'sleeveless2': `torso/clothes/sleeveless/sleeveless2/${mappedBodyType}`,
       'longsleeve': `torso/clothes/longsleeve/longsleeve/${mappedBodyType}`,
+      'longsleeve2': `torso/clothes/longsleeve/longsleeve2/${mappedBodyType}`,
       'hoodie': `torso/clothes/longsleeve/longsleeve/${mappedBodyType}`,
       'jacket': `torso/jacket/collared/${mappedBodyType}`,
       'dress': `dress/slit/female`,

@@ -139,7 +139,7 @@ export interface ClothingTopOption {
 export const TOPS: ClothingTopOption[] = [
   { id: 'none' as ClothingTop, displayName: 'None', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
   // Extended animations (46 rows - proper idle/sit/run/walk)
-  { id: 'shortsleeve_polo', displayName: 'Polo Shirt', supportedBodyTypes: ['male', 'female', 'teen'] },
+  { id: 'shortsleeve_polo', displayName: 'Polo Shirt', supportedBodyTypes: ['female', 'teen'] },
   { id: 'tshirt', displayName: 'T-Shirt', supportedBodyTypes: ['female', 'teen'] },
   { id: 'longsleeve2', displayName: 'Long Sleeve', supportedBodyTypes: ['female', 'teen'] },
   { id: 'sleeveless2', displayName: 'Tank Top', supportedBodyTypes: ['female', 'teen'] },
