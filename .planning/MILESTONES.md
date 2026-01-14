@@ -1,5 +1,34 @@
 # Project Milestones: GameBuddies Hub
 
+## v1.1 Avatar Customization (Shipped: 2026-01-14)
+
+**Delivered:** Full LPC-based avatar customization system replacing preset avatars with body type, skin tone, hair, and clothing options.
+
+**Phases completed:** 4-6 (3 plans total)
+
+**Key accomplishments:**
+
+- LPC asset manifest with all customization options (body types, skin tones, hair styles, clothing)
+- Async avatar composition with placeholder-then-swap pattern for multiplayer
+- Pure Phaser avatar editor scene with category tabs and live preview
+- Direction cycling preview (down/left/right/up) with debounced composition
+- First-join flow forcing customization or Quick Start
+- localStorage persistence with backward-compatible migration
+- Colyseus sync for real-time multiplayer avatar updates
+
+**Stats:**
+
+- 23 files created/modified
+- ~4,400 lines of TypeScript added
+- 3 phases, 3 plans
+- 1 day (same day as v1.0 shipped)
+
+**Git range:** `feat(04-01)` -> `docs(06-01)`
+
+**What's next:** Additional game integrations, mobile touch controls, room capacity management
+
+---
+
 ## v1.0 MVP (Shipped: 2026-01-14)
 
 **Delivered:** Virtual 2D lobby world where players walk as avatars, connect via proximity video chat, and launch games through arcade cabinet portals.

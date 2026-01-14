@@ -5,30 +5,40 @@
 See: .planning/PROJECT.md (updated 2026-01-14)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** v1.1 Avatar Customization — Complete, ready for milestone completion
+**Current focus:** v1.1 Avatar Customization shipped — Ready for next milestone
 
 ## Current Position
 
-Phase: 6 of 6 (First-Join & Persistence)
-Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-01-14 — Completed 06-01-PLAN.md
+Phase: All complete through v1.1
+Plan: N/A
+Status: Ready for next milestone
+Last activity: 2026-01-14 — v1.1 Avatar Customization shipped
 
-Progress: ██████████ 100% (3 of 3 phases complete)
+Progress: All v1.0 + v1.1 phases complete
 
-## v1.1 Scope
+## Shipped Milestones
 
-**Milestone Goal:** Replace preset avatars with full LPC-based customization system
+### v1.1 Avatar Customization (2026-01-14)
 
-**Phases:**
-- Phase 4: LPC Asset Integration - Load and composite avatar layers ✓
-- Phase 5: Avatar Editor UI - Phaser-based customization scene ✓
-- Phase 6: First-Join & Persistence - Force customization, save/load, sync ✓
+**Delivered:** Full LPC-based avatar customization replacing preset avatars
 
-**Constraints:**
-- Use LPC assets already in public/assets/avatars/
-- Keep editor in Phaser (not React modal)
-- Support all existing animations (walk, idle for 4 directions)
+**Key accomplishments:**
+- LPC asset manifest with all customization options
+- Async avatar composition with placeholder-then-swap pattern
+- Pure Phaser avatar editor with live preview
+- First-join flow with Quick Start option
+- localStorage persistence with migration
+- Colyseus sync for multiplayer updates
+
+### v1.0 MVP (2026-01-14)
+
+**Delivered:** Virtual 2D lobby world with proximity video chat and game launching
+
+**Key accomplishments:**
+- Colyseus + Socket.IO dual-server integration
+- Phaser3 2D virtual world with multiplayer
+- Proximity-based video chat with conversation isolation
+- Arcade cabinet game portals with invite notifications
 
 ## Key Decisions (v1.1)
 
@@ -46,13 +56,13 @@ Progress: ██████████ 100% (3 of 3 phases complete)
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: Phase 6 complete, v1.1 milestone ready
-Resume: Run /gsd:complete-milestone to archive v1.1
+Stopped at: v1.1 milestone shipped
+Resume: Run /gsd:discuss-milestone or /gsd:new-milestone to plan v1.2
 
 ## Roadmap Evolution
 
 - v1.0 MVP shipped: 2026-01-14 (Phases 1-3, 13 plans)
-- v1.1 Avatar Customization complete: 2026-01-14 (Phases 4-6, 3 plans)
+- v1.1 Avatar Customization shipped: 2026-01-14 (Phases 4-6, 3 plans)
 
 ## Architecture
 

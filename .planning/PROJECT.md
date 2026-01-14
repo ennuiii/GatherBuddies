@@ -50,10 +50,13 @@ A virtual 2D lobby world where players walk around as avatars, interact via prox
 - Arcade cabinet game launching via URL - v1.0
 - Preset avatar selection (4 characters) - v1.0
 - Text chat with dialog bubbles - v1.0
+- Avatar customization system (body, skin, hair, clothing) - v1.1
+- LPC asset compositing with live preview - v1.1
+- First-join avatar editor with Quick Start option - v1.1
+- Avatar persistence via localStorage with migration - v1.1
 
 ### Active
 
-- [ ] Avatar customization system (body, clothing, hair, accessories)
 - [ ] Additional game integrations beyond BingoBuddies
 - [ ] Mobile touch controls
 - [ ] Room capacity management
@@ -61,17 +64,17 @@ A virtual 2D lobby world where players walk around as avatars, interact via prox
 ### Out of Scope (v1)
 
 - Persistent accounts/profiles - Session-based like current games
-- Custom avatar creation beyond presets - Use preset avatars, defer to v2
 - Embedded whiteboards - Not needed for game hub
 - Screen sharing - Not relevant for game launching
 - Private hub instances - Focus on shared public hub
 
 ## Context
 
-**Current State (v1.0 shipped):**
-- ~99,400 lines TypeScript across Hub client and server
+**Current State (v1.1 shipped):**
+- ~103,800 lines TypeScript across Hub client and server
 - Tech stack: React, Vite, Phaser3, Colyseus, Socket.IO, WebRTC
-- 4 character presets with animations
+- Full LPC-based avatar customization with body/skin/hair/clothing
+- Phaser-native avatar editor with live preview
 - 8 arcade cabinet game portals
 - Proximity video chat with conversation isolation
 
@@ -103,6 +106,13 @@ A virtual 2D lobby world where players walk around as avatars, interact via prox
 | Hub room code as game room code | Avoids CORS issues with cross-origin API calls | Good |
 | Games open in new tab | Preserves Hub session while playing game | Good |
 | Web Audio API gain-based routing | Clean conversation isolation without track manipulation | Good |
+| Placeholder-then-swap for avatar loading | Prevents blocking player join on async composition | Good |
+| AvatarManifest as centralized source | Single source of truth for all avatar options | Good |
+| C key for avatar editor | E key already used for interactions | Good |
+| Scene overlay pattern for editor | Preserves game state during customization | Good |
+| Force editor on first join | Ensures all players have custom avatars | Good |
+| Quick Start option | Respects users who want to play immediately | Good |
+| localStorage with migration | Backward compatible with old avatar configs | Good |
 
 ---
-*Last updated: 2026-01-14 after v1.0 milestone*
+*Last updated: 2026-01-14 after v1.1 milestone*

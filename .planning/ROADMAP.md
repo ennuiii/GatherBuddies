@@ -7,7 +7,7 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 ## Milestones
 
 - ✅ [v1.0 MVP](milestones/v1.0-ROADMAP.md) (Phases 1-3) - SHIPPED 2026-01-14
-- 🚧 **v1.1 Avatar Customization** - Phases 4-6 (ready for completion)
+- ✅ [v1.1 Avatar Customization](milestones/v1.1-ROADMAP.md) (Phases 4-6) - SHIPPED 2026-01-14
 
 ## Completed Milestones
 
@@ -21,39 +21,14 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 
 </details>
 
-### 🚧 v1.1 Avatar Customization (In Progress)
+<details>
+<summary>✅ v1.1 Avatar Customization (Phases 4-6) - SHIPPED 2026-01-14</summary>
 
-**Milestone Goal:** Replace preset avatars with full LPC-based customization system allowing players to customize body type, clothing, hair, and shoes.
+- [x] Phase 4: LPC Asset Integration (1/1 plans) - completed 2026-01-14
+- [x] Phase 5: Avatar Editor UI (1/1 plans) - completed 2026-01-14
+- [x] Phase 6: First-Join & Persistence (1/1 plans) - completed 2026-01-14
 
-#### Phase 4: LPC Asset Integration ✓
-
-**Goal**: Load and composite avatar layers (body, clothing, hair, shoes) into animated spritesheets
-**Depends on**: v1.0 complete
-**Research**: Unlikely (assets exist, internal compositing patterns)
-**Status**: Complete (2026-01-14)
-
-Plans:
-- [x] 04-01: Asset manifest + OtherPlayer composition + live updates
-
-#### Phase 5: Avatar Editor UI ✓
-
-**Goal**: Phaser-based customization scene with category tabs and live preview
-**Depends on**: Phase 4
-**Research**: Unlikely (following existing CharacterSelect pattern)
-**Status**: Complete (2026-01-14)
-
-Plans:
-- [x] 05-01: AvatarEditorScene with tabs, live preview, and game integration
-
-#### Phase 6: First-Join & Persistence ✓
-
-**Goal**: Force customization on first join, save/load from localStorage, sync to Colyseus server
-**Depends on**: Phase 5
-**Research**: Unlikely (localStorage + Colyseus sync, internal patterns)
-**Status**: Complete (2026-01-14)
-
-Plans:
-- [x] 06-01: Verify and document existing first-join, localStorage, and Colyseus sync implementation
+</details>
 
 ## Progress
 
@@ -76,8 +51,9 @@ Plans:
 - 8 arcade cabinet game portals with invite notifications
 - Text chat with speech bubbles
 
-**v1.1 constraints:**
-- Use LPC assets already in public/assets/avatars/
-- Keep editor in Phaser (not React modal) for consistency
-- Support all existing character animations (walk, idle for 4 directions)
-- Existing avatar services may need adaptation for Phaser approach
+**v1.1 delivered:**
+- Full LPC-based avatar customization system
+- Phaser-native avatar editor with live preview
+- First-join customization flow with Quick Start option
+- localStorage persistence with migration support
+- Colyseus sync for multiplayer avatar updates
