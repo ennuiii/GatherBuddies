@@ -14,14 +14,24 @@ import { avatarAssetLoader, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT, LPC_COLS, LPC_ROW
 // Layer rendering order (bottom to top) based on LPC zPos values:
 // body=10, shoes=15, pants/bottom=20, top=35, hair=120
 // Shoes must be rendered BEFORE pants so pants overlay shoes correctly
+// Fantasy features (tail, wings) render behind character, ears/horns/hat on top
 const LAYER_ORDER = [
-  'body',      // zPos 10
-  'face',      // ~10-15
-  'shoes',     // zPos 15 - BEFORE bottom!
-  'bottom',    // zPos 20
-  'top',       // zPos 35
-  'hair_back', // zPos 120
-  'hair_front',// zPos 120
+  'tail',       // Behind character
+  'wings_bg',   // Wings background layer (behind body)
+  'body',       // zPos 10
+  'face',       // ~10-15 (or creature head)
+  'head',       // Creature heads (goblin, orc, etc.) - replaces face
+  'ears',       // Decorative ears on top of head
+  'beard',      // Facial hair
+  'shoes',      // zPos 15 - BEFORE bottom!
+  'bottom',     // zPos 20
+  'top',        // zPos 35
+  'hair_back',  // zPos 120
+  'hair_front', // zPos 120
+  'wings_fg',   // Wings foreground layer (in front of body)
+  'horns',      // On top of head/hair
+  'hat',        // Hats, helmets, crowns
+  'glasses',    // Eyewear
   'accessories',
 ] as const;
 
@@ -57,11 +67,20 @@ class AvatarCompositorService {
    * Generate a unique cache key from avatar config
    */
   private generateCacheKey(config: AvatarConfig): string {
-    // Create a deterministic string from config
+    // Create a deterministic string from config - include ALL customization options
     return JSON.stringify({
       body: config.body,
+      head: config.head,
+      ears: config.ears,
+      horns: config.horns,
       hair: config.hair,
+      eyes: config.eyes,
+      beard: config.beard,
+      wings: config.wings,
+      tail: config.tail,
       clothing: config.clothing,
+      hat: config.hat,
+      glasses: config.glasses,
       accessories: config.accessories.map(a => ({ type: a.type, color: a.color })),
     });
   }
@@ -89,8 +108,31 @@ class AvatarCompositorService {
     console.log('[AvatarCompositor] Building layers for body type:', config.body.type);
     const layers = new Map<LayerName, LayerConfig>();
     const DEFAULT_COLOR = 'white';
-    const DEFAULT_HAIR_COLOR = 'black';
     const bodyType = config.body.type;
+
+    // ============= BEHIND CHARACTER LAYERS =============
+
+    // Tail - key format: tail_{type}_{bodyType}
+    if (config.tail?.type && config.tail.type !== 'none') {
+      layers.set('tail', {
+        textureKey: `tail_${config.tail.type}_${bodyType}`,
+        tint: config.tail.color ? this.hexToInt(config.tail.color) : undefined,
+      });
+    }
+
+    // Wings - need both bg (behind body) and fg (in front) layers
+    if (config.wings?.type && config.wings.type !== 'none') {
+      layers.set('wings_bg', {
+        textureKey: `wings_bg_${config.wings.type}_${bodyType}`,
+        tint: config.wings.color ? this.hexToInt(config.wings.color) : undefined,
+      });
+      layers.set('wings_fg', {
+        textureKey: `wings_fg_${config.wings.type}_${bodyType}`,
+        tint: config.wings.color ? this.hexToInt(config.wings.color) : undefined,
+      });
+    }
+
+    // ============= BODY LAYERS =============
 
     // Body - key format: body_{skinTone}_{bodyType}
     layers.set('body', {
@@ -98,13 +140,39 @@ class AvatarCompositorService {
       // Note: Body sprites are pre-colored per skin tone, no tint needed
     });
 
-    // Face - key format: face_{skinTone}_{bodyType}
-    layers.set('face', {
-      textureKey: `face_${config.body.skinTone}_${bodyType}`,
-    });
+    // Face/Head - use creature head if not human, otherwise normal face
+    const headType = config.head?.type || 'human';
+    if (headType !== 'human') {
+      // Creature head - key format: head_{species}_{bodyType}
+      layers.set('head', {
+        textureKey: `head_${headType}_${bodyType}`,
+      });
+    } else {
+      // Human face - key format: face_{skinTone}_{bodyType}
+      layers.set('face', {
+        textureKey: `face_${config.body.skinTone}_${bodyType}`,
+      });
+    }
+
+    // Ears - key format: ears_{type}_{bodyType}
+    if (config.ears?.type && config.ears.type !== 'none') {
+      layers.set('ears', {
+        textureKey: `ears_${config.ears.type}_${bodyType}`,
+        tint: config.ears.color ? this.hexToInt(config.ears.color) : undefined,
+      });
+    }
+
+    // Beard - key format: beard_{style}_{color}_{bodyType}
+    if (config.beard?.style && config.beard.style !== 'none') {
+      const beardColor = getLpcHairColor(config.beard.color);
+      layers.set('beard', {
+        textureKey: `beard_${config.beard.style}_${beardColor}_${bodyType}`,
+      });
+    }
+
+    // ============= CLOTHING LAYERS =============
 
     // Bottom (pants/skirt) - key format: bottom_{type}_{color}_{bodyType}
-    // Skip if 'none' (no bottom layer)
     if (config.clothing.bottom && config.clothing.bottom !== 'none') {
       layers.set('bottom', {
         textureKey: `bottom_${config.clothing.bottom}_${DEFAULT_COLOR}_${bodyType}`,
@@ -113,7 +181,6 @@ class AvatarCompositorService {
     }
 
     // Shoes - key format: shoes_{type}_{color}_{bodyType}
-    // Skip if 'none' (barefoot)
     if (config.clothing.shoes && config.clothing.shoes !== 'none') {
       layers.set('shoes', {
         textureKey: `shoes_${config.clothing.shoes}_${DEFAULT_COLOR}_${bodyType}`,
@@ -122,7 +189,6 @@ class AvatarCompositorService {
     }
 
     // Top (shirt/jacket) - key format: top_{type}_{color}_{bodyType}
-    // Skip if 'none' (no top)
     if (config.clothing.top && config.clothing.top !== 'none') {
       layers.set('top', {
         textureKey: `top_${config.clothing.top}_${DEFAULT_COLOR}_${bodyType}`,
@@ -130,8 +196,9 @@ class AvatarCompositorService {
       });
     }
 
+    // ============= HAIR LAYERS =============
+
     // Hair - key format: hair_{style}_{color}_{bodyType}
-    // LPC has pre-colored sprites, so we load the matching color file (no tinting needed)
     if (config.hair.style !== 'bald') {
       const hairInfo = HAIR_STYLES.find(h => h.id === config.hair.style);
       const hairColor = getLpcHairColor(config.hair.color);
@@ -140,18 +207,43 @@ class AvatarCompositorService {
       if (hairInfo?.hasBackLayer) {
         layers.set('hair_back', {
           textureKey: `hair_${config.hair.style}_back_${hairColor}_${bodyType}`,
-          // No tint - LPC sprites are pre-colored
         });
       }
 
       // Front layer (main hair)
       layers.set('hair_front', {
         textureKey: `hair_${config.hair.style}_${hairColor}_${bodyType}`,
-        // No tint - LPC sprites are pre-colored
       });
     }
 
-    // Accessories (not body-type-specific)
+    // ============= ON TOP LAYERS =============
+
+    // Horns - key format: horns_{type}_{bodyType}
+    if (config.horns?.type && config.horns.type !== 'none') {
+      layers.set('horns', {
+        textureKey: `horns_${config.horns.type}_${bodyType}`,
+        tint: config.horns.color ? this.hexToInt(config.horns.color) : undefined,
+      });
+    }
+
+    // Hat - key format: hat_{type}_white_{bodyType}
+    // Note: Assets loaded with 'white' base color for tinting
+    if (config.hat?.type && config.hat.type !== 'none') {
+      layers.set('hat', {
+        textureKey: `hat_${config.hat.type}_white_${bodyType}`,
+        tint: config.hat.color ? this.hexToInt(config.hat.color) : undefined,
+      });
+    }
+
+    // Glasses - key format: glasses_{type}
+    if (config.glasses?.type && config.glasses.type !== 'none') {
+      layers.set('glasses', {
+        textureKey: `glasses_${config.glasses.type}`,
+        tint: config.glasses.color ? this.hexToInt(config.glasses.color) : undefined,
+      });
+    }
+
+    // Legacy accessories (not body-type-specific)
     if (config.accessories.length > 0) {
       const acc = config.accessories[0];
       layers.set('accessories', {
