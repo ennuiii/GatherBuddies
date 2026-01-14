@@ -43,9 +43,9 @@ export interface SkinToneOption {
   hex: string;
 }
 
+// NOTE: Skin tone IDs must match filenames in public/assets/avatars/bodies/{bodyType}/*.png
 export const SKIN_TONES: SkinToneOption[] = [
   { id: 'light', displayName: 'Light', hex: '#FFE4C4' },
-  { id: 'fair', displayName: 'Fair', hex: '#F0C8A0' },
   { id: 'olive', displayName: 'Olive', hex: '#D4A574' },
   { id: 'tan', displayName: 'Tan', hex: '#8D5524' },
   { id: 'dark', displayName: 'Dark', hex: '#4A2C17' },

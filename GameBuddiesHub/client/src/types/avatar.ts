@@ -34,7 +34,7 @@ export {
 
 // Body configuration options
 export type BodyType = 'masculine' | 'feminine' | 'neutral';
-export type SkinTone = 'light' | 'fair' | 'olive' | 'tan' | 'dark';
+export type SkinTone = 'light' | 'olive' | 'tan' | 'dark';
 
 // Hair options
 export type HairStyle = 'short' | 'long' | 'curly' | 'ponytail' | 'mohawk' | 'bald' | 'afro' | 'bob';
@@ -90,7 +90,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   id: '',
   body: {
     type: 'neutral',
-    skinTone: 'fair',
+    skinTone: 'light',
   },
   hair: {
     style: 'short',
