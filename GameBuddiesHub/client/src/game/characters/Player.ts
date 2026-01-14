@@ -7,6 +7,10 @@
 
 import Phaser from 'phaser';
 
+// Player sprite scale factor
+// LPC sprites are 64x64 pixels. Scale 1.5 = 96x96, Scale 2.0 = 128x128
+export const PLAYER_SCALE = 1.5;
+
 // Position adjustments for sitting in each direction: [xShift, yShift, depthShift]
 export const sittingShiftData: Record<string, [number, number, number]> = {
   up: [0, 3, -10],
@@ -37,10 +41,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.playerTexture = texture;
     this.setDepth(this.y);
 
+    // Apply scale to make avatar larger in the world
+    this.setScale(PLAYER_SCALE);
+
     this.anims.play(`${this.playerTexture}_idle_down`, true);
 
-    // Create container for name and dialog bubble
-    this.playerContainer = this.scene.add.container(this.x, this.y - 30).setDepth(5000);
+    // Calculate scaled sprite height for container positioning
+    const scaledHeight = this.height * PLAYER_SCALE;
+
+    // Create container for name and dialog bubble (positioned above scaled sprite)
+    this.playerContainer = this.scene.add.container(this.x, this.y - scaledHeight * 0.5).setDepth(5000);
 
     // Add dialog bubble container
     this.playerDialogBubble = this.scene.add.container(0, 0).setDepth(5000);
@@ -55,13 +65,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       .setOrigin(0.5);
     this.playerContainer.add(this.playerName);
 
-    // Enable physics for the container
+    // Enable physics for the container (uses scaled dimensions)
     this.scene.physics.world.enable(this.playerContainer);
     const playContainerBody = this.playerContainer.body as Phaser.Physics.Arcade.Body;
     const collisionScale = [0.5, 0.2];
     playContainerBody
-      .setSize(this.width * collisionScale[0], this.height * collisionScale[1])
-      .setOffset(-8, this.height * (1 - collisionScale[1]) + 6);
+      .setSize(this.width * PLAYER_SCALE * collisionScale[0], this.height * PLAYER_SCALE * collisionScale[1])
+      .setOffset(-8 * PLAYER_SCALE, this.height * PLAYER_SCALE * (1 - collisionScale[1]) + 6);
   }
 
   updateDialogBubble(content: string) {

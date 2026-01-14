@@ -6,7 +6,7 @@
  */
 
 import Phaser from 'phaser';
-import Player, { sittingShiftData } from './Player';
+import Player, { sittingShiftData, PLAYER_SCALE } from './Player';
 import { Chair } from '../items';
 import type { PlayerSelector } from '../items';
 
@@ -103,8 +103,12 @@ export default class MyPlayer extends Player {
         if (keyE && Phaser.Input.Keyboard.JustDown(keyE)) {
           const currentAnim = this.anims.currentAnim?.key;
           if (currentAnim) {
+            // Animation format: {textureKey}_{action}_{direction}
+            // Action is second-to-last, direction is last
             const parts = currentAnim.split('_');
-            parts[1] = 'idle';
+            if (parts.length >= 2) {
+              parts[parts.length - 2] = 'idle';
+            }
             this.play(parts.join('_'), true);
           }
           this.playerBehavior = PlayerBehavior.IDLE;
@@ -218,16 +222,20 @@ export default class MyPlayer extends Player {
       // Idle animation
       const currentAnim = this.anims.currentAnim?.key;
       if (currentAnim) {
+        // Animation format: {textureKey}_{action}_{direction}
+        // Action is second-to-last, direction is last
         const parts = currentAnim.split('_');
-        parts[1] = 'idle';
-        const newAnim = parts.join('_');
-        if (currentAnim !== newAnim) {
-          this.play(newAnim, true);
-          this.onMovementUpdate?.({
-            x: this.x,
-            y: this.y,
-            anim: newAnim,
-          });
+        if (parts.length >= 2) {
+          parts[parts.length - 2] = 'idle';
+          const newAnim = parts.join('_');
+          if (currentAnim !== newAnim) {
+            this.play(newAnim, true);
+            this.onMovementUpdate?.({
+              x: this.x,
+              y: this.y,
+              anim: newAnim,
+            });
+          }
         }
       }
     }
@@ -265,12 +273,15 @@ Phaser.GameObjects.GameObjectFactory.register(
 
     this.scene.physics.world.enableBody(sprite, Phaser.Physics.Arcade.DYNAMIC_BODY);
 
+    // Use scaled dimensions for physics body (sprite is already scaled in Player constructor)
     const collisionScale = [0.5, 0.2];
+    const scaledWidth = sprite.width * PLAYER_SCALE;
+    const scaledHeight = sprite.height * PLAYER_SCALE;
     sprite.body!
-      .setSize(sprite.width * collisionScale[0], sprite.height * collisionScale[1])
+      .setSize(scaledWidth * collisionScale[0], scaledHeight * collisionScale[1])
       .setOffset(
-        sprite.width * (1 - collisionScale[0]) * 0.5,
-        sprite.height * (1 - collisionScale[1])
+        scaledWidth * (1 - collisionScale[0]) * 0.5,
+        scaledHeight * (1 - collisionScale[1])
       );
 
     return sprite;
