@@ -306,30 +306,28 @@ class AvatarCompositorService {
     // Generate unique texture key
     const textureKey = `avatar_${config.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Convert to blob and create Phaser texture
-    const blob = await displayCanvas.convertToBlob({ type: 'image/png' });
-    const url = URL.createObjectURL(blob);
+    // Convert OffscreenCanvas to HTMLCanvasElement (required for Phaser)
+    // Using HTMLCanvasElement + toDataURL + Image avoids CSP blob: restriction
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = displayWidth;
+    tempCanvas.height = displayHeight;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.drawImage(displayCanvas, 0, 0);
 
-    // Load into Phaser
+    // Convert to data URL and load as Image
+    const dataUrl = tempCanvas.toDataURL('image/png');
+    const img = new Image();
+
     await new Promise<void>((resolve, reject) => {
-      this.scene!.load.spritesheet(textureKey, url, {
-        frameWidth: DISPLAY_FRAME_WIDTH,
-        frameHeight: DISPLAY_FRAME_HEIGHT,
-      });
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error(`Failed to load composed avatar image`));
+      img.src = dataUrl;
+    });
 
-      this.scene!.load.once(`filecomplete-spritesheet-${textureKey}`, () => {
-        URL.revokeObjectURL(url);
-        resolve();
-      });
-
-      this.scene!.load.once('loaderror', (file: Phaser.Loader.File) => {
-        if (file.key === textureKey) {
-          URL.revokeObjectURL(url);
-          reject(new Error(`Failed to create texture: ${textureKey}`));
-        }
-      });
-
-      this.scene!.load.start();
+    // Add spritesheet texture directly (bypasses XHR loader and CSP restrictions)
+    this.scene!.textures.addSpriteSheet(textureKey, img, {
+      frameWidth: DISPLAY_FRAME_WIDTH,
+      frameHeight: DISPLAY_FRAME_HEIGHT,
     });
 
     // Add to cache
