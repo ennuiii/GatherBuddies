@@ -635,6 +635,10 @@ export default class Game extends Phaser.Scene {
     const spawnY = player.y || 500;
 
     try {
+      // Re-initialize compositor with Game scene (in case avatar editor had it)
+      avatarAssetLoader.initialize(this);
+      avatarCompositor.initialize(this);
+
       // Try to compose avatar texture
       console.log('[Game] Composing avatar texture...');
       const textureKey = await avatarCompositor.composeAvatar(this.avatarConfig);

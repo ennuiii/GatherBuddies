@@ -71,6 +71,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
   private previewTextureKey: string = '';
   private isComposing: boolean = false;
   private pendingConfig: AvatarConfig | null = null;
+  private debounceTimer?: Phaser.Time.TimerEvent;
+  private readonly DEBOUNCE_MS = 250; // Delay before composing preview
 
   // Tab buttons for highlighting
   private tabButtons: Map<CategoryId, Phaser.GameObjects.Rectangle> = new Map();
@@ -777,22 +779,46 @@ export default class AvatarEditorScene extends Phaser.Scene {
    * Update preview sprite with composed avatar texture.
    * Debounces rapid changes to avoid spamming composition.
    */
-  private async updatePreview() {
-    // If already composing, queue this config for later
+  private updatePreview() {
+    // Cancel any pending debounce
+    if (this.debounceTimer) {
+      this.debounceTimer.destroy();
+      this.debounceTimer = undefined;
+    }
+
+    // If already composing, queue this config for later (will be picked up after current completes)
     if (this.isComposing) {
       this.pendingConfig = JSON.parse(JSON.stringify(this.currentConfig));
       return;
     }
 
-    this.isComposing = true;
-
-    // Show loading state
+    // Show loading indicator immediately
     const loadingText = this.previewContainer.getByName('loadingText') as Phaser.GameObjects.Text;
     if (loadingText) {
       loadingText.setText('Loading...');
       loadingText.setColor('#666666');
       loadingText.setVisible(true);
     }
+
+    // Debounce: wait before actually composing
+    this.debounceTimer = this.time.delayedCall(this.DEBOUNCE_MS, () => {
+      this.debounceTimer = undefined;
+      this.doCompose();
+    });
+  }
+
+  /**
+   * Actually perform the avatar composition (called after debounce)
+   */
+  private async doCompose() {
+    if (this.isComposing) {
+      // Another compose started, queue this
+      this.pendingConfig = JSON.parse(JSON.stringify(this.currentConfig));
+      return;
+    }
+
+    this.isComposing = true;
+    const loadingText = this.previewContainer.getByName('loadingText') as Phaser.GameObjects.Text;
 
     try {
       console.log('[AvatarEditor] Composing avatar with config:', this.currentConfig);
@@ -827,7 +853,8 @@ export default class AvatarEditorScene extends Phaser.Scene {
       const pending = this.pendingConfig;
       this.pendingConfig = null;
       this.currentConfig = pending;
-      this.updatePreview();
+      // Short delay before processing pending to allow UI to breathe
+      this.time.delayedCall(50, () => this.doCompose());
     }
   }
 
@@ -863,6 +890,12 @@ export default class AvatarEditorScene extends Phaser.Scene {
     if (this.directionTimer) {
       this.directionTimer.destroy();
       this.directionTimer = undefined;
+    }
+
+    // Stop debounce timer
+    if (this.debounceTimer) {
+      this.debounceTimer.destroy();
+      this.debounceTimer = undefined;
     }
 
     // Clear pending composition
