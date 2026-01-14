@@ -33,7 +33,7 @@ Integrate a SkyOffice-style 2D virtual world into the GameBuddies platform. Play
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: TBD (run /gsd:plan-phase 4 to break down)
+- [ ] 04-01: Asset manifest + OtherPlayer composition + live updates
 
 #### Phase 5: Avatar Editor UI
 
@@ -63,7 +63,7 @@ Plans:
 | 1.5. Integration | v1.0 | 3/3 | Complete | 2026-01-12 |
 | 2. Social Features | v1.0 | 6/6 | Complete | 2026-01-13 |
 | 3. Game Integration | v1.0 | 2/2 | Complete | 2026-01-14 |
-| 4. LPC Asset Integration | v1.1 | 0/? | Not started | - |
+| 4. LPC Asset Integration | v1.1 | 0/1 | Planned | - |
 | 5. Avatar Editor UI | v1.1 | 0/? | Not started | - |
 | 6. First-Join & Persistence | v1.1 | 0/? | Not started | - |
 
