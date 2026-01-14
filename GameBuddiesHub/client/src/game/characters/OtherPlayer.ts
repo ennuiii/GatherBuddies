@@ -6,7 +6,7 @@
  */
 
 import Phaser from 'phaser';
-import Player from './Player';
+import Player, { PLAYER_SCALE } from './Player';
 import { phaserEvents } from '../events/EventCenter';
 
 export default class OtherPlayer extends Player {
@@ -172,13 +172,15 @@ export default class OtherPlayer extends Player {
   preUpdate(t: number, dt: number) {
     super.preUpdate(t, dt);
 
+    // Calculate container offset based on scaled sprite height
+    const containerOffset = this.height * PLAYER_SCALE * 0.5;
+
     // If game was paused for more than 750ms, snap to target
     if (this.lastUpdateTimestamp && t - this.lastUpdateTimestamp > 750) {
       this.lastUpdateTimestamp = t;
       this.x = this.targetPosition[0];
       this.y = this.targetPosition[1];
-      this.playerContainer.x = this.targetPosition[0];
-      this.playerContainer.y = this.targetPosition[1] - 30;
+      this.playerContainer.setPosition(this.x, this.y - containerOffset);
       return;
     }
 
@@ -193,12 +195,10 @@ export default class OtherPlayer extends Player {
     // Snap if close enough
     if (Math.abs(dx) < delta) {
       this.x = this.targetPosition[0];
-      this.playerContainer.x = this.targetPosition[0];
       dx = 0;
     }
     if (Math.abs(dy) < delta) {
       this.y = this.targetPosition[1];
-      this.playerContainer.y = this.targetPosition[1] - 30;
       dy = 0;
     }
 
@@ -219,6 +219,9 @@ export default class OtherPlayer extends Player {
     if (vx !== 0 || vy !== 0) {
       this.playContainerBody.velocity.setLength(speed);
     }
+
+    // Sync container position directly to prevent drift
+    this.playerContainer.setPosition(this.x, this.y - containerOffset);
   }
 }
 

@@ -137,19 +137,22 @@ export default class MyPlayer extends Player {
             this.setVelocity(0, 0);
             this.playContainerBody.setVelocity(0, 0);
 
-            // Move player to chair position with offset (scale shifts for larger sprite)
+            // Move player to chair position with offset
             const shift = sittingShiftData[chair.itemDirection];
             if (shift) {
-              const scaledShiftX = shift[0] * PLAYER_SCALE;
-              const scaledShiftY = shift[1] * PLAYER_SCALE;
-              this.setPosition(chair.x + scaledShiftX, chair.y + scaledShiftY);
+              // Compensate Y position for scaled sprite (sprite center moves up to keep feet aligned)
+              // When scale > 1, sprite extends further down, so move sprite up to compensate
+              const scaleCompensationY = (this.height / 2) * (PLAYER_SCALE - 1);
+              const sittingY = chair.y + shift[1] - scaleCompensationY;
+
+              this.setPosition(chair.x + shift[0], sittingY);
               this.setDepth(chair.depth + shift[2]);
 
-              // Container offset scales with sprite size
+              // Container offset scales with sprite size (for name label positioning)
               const containerOffset = this.height * PLAYER_SCALE * 0.5;
               this.playerContainer.setPosition(
-                chair.x + scaledShiftX,
-                chair.y + scaledShiftY - containerOffset
+                chair.x + shift[0],
+                sittingY - containerOffset
               );
             }
 
@@ -199,11 +202,15 @@ export default class MyPlayer extends Player {
       this.body!.velocity.setLength(speed);
     }
 
-    // Also update player container velocity
+    // Sync container velocity (for physics collisions)
     this.playContainerBody.setVelocity(vx, vy);
     if (vx !== 0 || vy !== 0) {
       this.playContainerBody.velocity.setLength(speed);
     }
+
+    // Sync container position directly to prevent drift
+    const containerOffset = this.height * PLAYER_SCALE * 0.5;
+    this.playerContainer.setPosition(this.x, this.y - containerOffset);
 
     // Update animation and send to server
     if (vx !== 0 || vy !== 0) {
