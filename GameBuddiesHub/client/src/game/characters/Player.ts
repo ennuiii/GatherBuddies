@@ -65,13 +65,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       .setOrigin(0.5);
     this.playerContainer.add(this.playerName);
 
-    // Enable physics for the container (uses scaled dimensions)
+    // Enable physics for the container
+    // Note: Keep collision body at original size for consistent gameplay feel
     this.scene.physics.world.enable(this.playerContainer);
     const playContainerBody = this.playerContainer.body as Phaser.Physics.Arcade.Body;
     const collisionScale = [0.5, 0.2];
     playContainerBody
-      .setSize(this.width * PLAYER_SCALE * collisionScale[0], this.height * PLAYER_SCALE * collisionScale[1])
-      .setOffset(-8 * PLAYER_SCALE, this.height * PLAYER_SCALE * (1 - collisionScale[1]) + 6);
+      .setSize(this.width * collisionScale[0], this.height * collisionScale[1])
+      .setOffset(-8, this.height * (1 - collisionScale[1]) + 6);
   }
 
   updateDialogBubble(content: string) {

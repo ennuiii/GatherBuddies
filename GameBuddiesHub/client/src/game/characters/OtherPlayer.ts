@@ -6,7 +6,7 @@
  */
 
 import Phaser from 'phaser';
-import Player, { PLAYER_SCALE } from './Player';
+import Player from './Player';
 import { phaserEvents } from '../events/EventCenter';
 
 export default class OtherPlayer extends Player {
@@ -256,15 +256,13 @@ Phaser.GameObjects.GameObjectFactory.register(
 
     this.scene.physics.world.enableBody(sprite, Phaser.Physics.Arcade.DYNAMIC_BODY);
 
-    // Use scaled dimensions for physics body (sprite is already scaled in Player constructor)
+    // Keep collision body at original size for consistent gameplay feel
     const collisionScale = [6, 4];
-    const scaledWidth = sprite.width * PLAYER_SCALE;
-    const scaledHeight = sprite.height * PLAYER_SCALE;
     sprite.body!
-      .setSize(scaledWidth * collisionScale[0], scaledHeight * collisionScale[1])
+      .setSize(sprite.width * collisionScale[0], sprite.height * collisionScale[1])
       .setOffset(
-        scaledWidth * (1 - collisionScale[0]) * 0.5,
-        scaledHeight * (1 - collisionScale[1]) * 0.5 + 17 * PLAYER_SCALE
+        sprite.width * (1 - collisionScale[0]) * 0.5,
+        sprite.height * (1 - collisionScale[1]) * 0.5 + 17
       );
 
     return sprite;

@@ -137,15 +137,19 @@ export default class MyPlayer extends Player {
             this.setVelocity(0, 0);
             this.playContainerBody.setVelocity(0, 0);
 
-            // Move player to chair position with offset
+            // Move player to chair position with offset (scale shifts for larger sprite)
             const shift = sittingShiftData[chair.itemDirection];
             if (shift) {
-              this.setPosition(chair.x + shift[0], chair.y + shift[1]);
+              const scaledShiftX = shift[0] * PLAYER_SCALE;
+              const scaledShiftY = shift[1] * PLAYER_SCALE;
+              this.setPosition(chair.x + scaledShiftX, chair.y + scaledShiftY);
               this.setDepth(chair.depth + shift[2]);
 
+              // Container offset scales with sprite size
+              const containerOffset = this.height * PLAYER_SCALE * 0.5;
               this.playerContainer.setPosition(
-                chair.x + shift[0],
-                chair.y + shift[1] - 30
+                chair.x + scaledShiftX,
+                chair.y + scaledShiftY - containerOffset
               );
             }
 
@@ -273,15 +277,14 @@ Phaser.GameObjects.GameObjectFactory.register(
 
     this.scene.physics.world.enableBody(sprite, Phaser.Physics.Arcade.DYNAMIC_BODY);
 
-    // Use scaled dimensions for physics body (sprite is already scaled in Player constructor)
+    // Keep collision body at original size for consistent gameplay feel
+    // (sprite is visually scaled but hitbox stays same for door/passage fitting)
     const collisionScale = [0.5, 0.2];
-    const scaledWidth = sprite.width * PLAYER_SCALE;
-    const scaledHeight = sprite.height * PLAYER_SCALE;
     sprite.body!
-      .setSize(scaledWidth * collisionScale[0], scaledHeight * collisionScale[1])
+      .setSize(sprite.width * collisionScale[0], sprite.height * collisionScale[1])
       .setOffset(
-        scaledWidth * (1 - collisionScale[0]) * 0.5,
-        scaledHeight * (1 - collisionScale[1])
+        sprite.width * (1 - collisionScale[0]) * 0.5,
+        sprite.height * (1 - collisionScale[1])
       );
 
     return sprite;
