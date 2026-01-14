@@ -5,16 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-01-14)
 
 **Core value:** Social game launching - Players meet organically in a shared virtual space and form groups to play games together
-**Current focus:** v1.1 Avatar Customization shipped — Ready for next milestone
+**Current focus:** v1.2 Avatar Polish — Fix avatar creation to show only valid LPC combinations
 
 ## Current Position
 
-Phase: All complete through v1.1
-Plan: N/A
-Status: Ready for next milestone
-Last activity: 2026-01-14 — v1.1 Avatar Customization shipped
+Phase: 7 of 8 (LPC Reference Audit & Manifest Alignment)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-14 — Milestone v1.2 created
 
-Progress: All v1.0 + v1.1 phases complete
+Progress: ░░░░░░░░░░ 0% (0 of 2 phases complete)
+
+## v1.2 Scope
+
+**Milestone Goal:** Fix avatar creation to show only valid LPC combinations with clear UX feedback
+
+**Features:**
+- LPC Reference Alignment: Audit manifest against LPC-Reference folder
+- Body Type Filtering: Fix missing options (e.g., male tops)
+- Animation Validation: Only show items with idle/sit/run/walk
+- Disabled Options UX: Gray out with tooltips (not hidden)
+- Error Logging: Proper error tracking for debugging
+
+**Constraints:**
+- Must check against C:\GameBuddiesProject\LPC-Reference folder
+- Only combinations with idle/sit/run/walk animations valid
+- Maintain backward compatibility with existing saved avatars
 
 ## Shipped Milestones
 
@@ -22,23 +38,9 @@ Progress: All v1.0 + v1.1 phases complete
 
 **Delivered:** Full LPC-based avatar customization replacing preset avatars
 
-**Key accomplishments:**
-- LPC asset manifest with all customization options
-- Async avatar composition with placeholder-then-swap pattern
-- Pure Phaser avatar editor with live preview
-- First-join flow with Quick Start option
-- localStorage persistence with migration
-- Colyseus sync for multiplayer updates
-
 ### v1.0 MVP (2026-01-14)
 
 **Delivered:** Virtual 2D lobby world with proximity video chat and game launching
-
-**Key accomplishments:**
-- Colyseus + Socket.IO dual-server integration
-- Phaser3 2D virtual world with multiplayer
-- Proximity-based video chat with conversation isolation
-- Arcade cabinet game portals with invite notifications
 
 ## Key Decisions (v1.1)
 
@@ -46,23 +48,24 @@ Progress: All v1.0 + v1.1 phases complete
 |-------|----------|-----------|
 | 4 | Placeholder-then-swap pattern for OtherPlayer | Prevents blocking player join on async avatar loading |
 | 4 | Event-based character updates | Allows Game.ts to handle async composition without coupling |
-| 4 | AvatarManifest as source of truth | Centralizes all avatar options, avatar.ts re-exports for compatibility |
+| 4 | AvatarManifest as source of truth | Centralizes all avatar options |
 | 5 | C key for editor (not E) | E already used for chair/cabinet interactions |
 | 5 | Scene overlay pattern | Editor launches as overlay to preserve game state |
-| 6 | Force editor on first join | Players must customize or quick-start, no auto-spawn |
-| 6 | Quick Start option | Users who want to play immediately can skip customization |
-| 6 | Config migration | Old saved avatars automatically upgraded to new format |
+| 6 | Force editor on first join | Players must customize or quick-start |
+| 6 | Quick Start option | Users who want to play immediately can skip |
+| 6 | Config migration | Old saved avatars automatically upgraded |
 
 ## Session Continuity
 
 Last session: 2026-01-14
-Stopped at: v1.1 milestone shipped
-Resume: Run /gsd:discuss-milestone or /gsd:new-milestone to plan v1.2
+Stopped at: Milestone v1.2 initialization
+Resume: Run /gsd:plan-phase 7 to create first plan
 
 ## Roadmap Evolution
 
 - v1.0 MVP shipped: 2026-01-14 (Phases 1-3, 13 plans)
 - v1.1 Avatar Customization shipped: 2026-01-14 (Phases 4-6, 3 plans)
+- v1.2 Avatar Polish created: 2026-01-14 (Phases 7-8)
 
 ## Architecture
 
