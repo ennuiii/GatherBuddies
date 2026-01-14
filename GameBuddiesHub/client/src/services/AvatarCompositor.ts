@@ -11,15 +11,17 @@ import type { AvatarConfig, SkinTone } from '../types/avatar';
 import { HAIR_STYLES, SKIN_TONES, getLpcHairColor } from './AvatarManifest';
 import { avatarAssetLoader, LPC_FRAME_WIDTH, LPC_FRAME_HEIGHT, LPC_COLS, LPC_ROWS } from './AvatarAssetLoader';
 
-// Layer rendering order (bottom to top)
+// Layer rendering order (bottom to top) based on LPC zPos values:
+// body=10, shoes=15, pants/bottom=20, top=35, hair=120
+// Shoes must be rendered BEFORE pants so pants overlay shoes correctly
 const LAYER_ORDER = [
-  'body',
-  'face',
-  'bottom',
-  'shoes',
-  'top',
-  'hair_back',
-  'hair_front',
+  'body',      // zPos 10
+  'face',      // ~10-15
+  'shoes',     // zPos 15 - BEFORE bottom!
+  'bottom',    // zPos 20
+  'top',       // zPos 35
+  'hair_back', // zPos 120
+  'hair_front',// zPos 120
   'accessories',
 ] as const;
 
