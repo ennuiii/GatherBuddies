@@ -33,9 +33,6 @@ export interface BodyTypeOption {
 export const BODY_TYPES: BodyTypeOption[] = [
   { id: 'male', displayName: 'Male' },
   { id: 'female', displayName: 'Female' },
-  { id: 'muscular', displayName: 'Muscular' },
-  { id: 'child', displayName: 'Child' },
-  { id: 'teen', displayName: 'Teen' },
 ];
 
 // ============================================================================
@@ -137,15 +134,15 @@ export interface ClothingTopOption {
 // 'pregnant' is not in BODY_TYPES so omitted from supportedBodyTypes.
 // 'none' is a special option for no top (no torso layer rendered)
 export const TOPS: ClothingTopOption[] = [
-  { id: 'none' as ClothingTop, displayName: 'None', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'none' as ClothingTop, displayName: 'None', supportedBodyTypes: ['male', 'female'] },
   // Extended animations (46 rows - proper idle/sit/run/walk)
-  { id: 'shortsleeve_polo', displayName: 'Polo Shirt', supportedBodyTypes: ['female', 'teen'] },
-  { id: 'tshirt', displayName: 'T-Shirt', supportedBodyTypes: ['female', 'teen'] },
-  { id: 'longsleeve2', displayName: 'Long Sleeve', supportedBodyTypes: ['female', 'teen'] },
-  { id: 'sleeveless2', displayName: 'Tank Top', supportedBodyTypes: ['female', 'teen'] },
+  { id: 'shortsleeve_polo', displayName: 'Polo Shirt', supportedBodyTypes: ['female'] },
+  { id: 'tshirt', displayName: 'T-Shirt', supportedBodyTypes: ['female'] },
+  { id: 'longsleeve2', displayName: 'Long Sleeve', supportedBodyTypes: ['female'] },
+  { id: 'sleeveless2', displayName: 'Tank Top', supportedBodyTypes: ['female'] },
   // Basic animations (21 rows - use walk fallback for idle/sit/run)
-  { id: 'longsleeve', displayName: 'Long Sleeve (Basic)', supportedBodyTypes: ['male', 'female', 'teen'] },
-  { id: 'shortsleeve', displayName: 'Short Sleeve (Basic)', supportedBodyTypes: ['male', 'female', 'teen'] },
+  { id: 'longsleeve', displayName: 'Long Sleeve (Basic)', supportedBodyTypes: ['male', 'female'] },
+  { id: 'shortsleeve', displayName: 'Short Sleeve (Basic)', supportedBodyTypes: ['male', 'female'] },
   { id: 'sleeveless', displayName: 'Sleeveless (Basic)', supportedBodyTypes: ['male', 'female'] },
 ];
 
@@ -163,10 +160,10 @@ export interface ClothingBottomOption {
 // Items with only 21 rows (skirt) are excluded
 // Leggings only have female assets in LPC
 export const BOTTOMS: ClothingBottomOption[] = [
-  { id: 'pants', displayName: 'Pants', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
-  { id: 'shorts', displayName: 'Shorts', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'pants', displayName: 'Pants', supportedBodyTypes: ['male', 'female'] },
+  { id: 'shorts', displayName: 'Shorts', supportedBodyTypes: ['male', 'female'] },
   { id: 'leggings', displayName: 'Leggings', supportedBodyTypes: ['female'] },
-  { id: 'pantaloons', displayName: 'Pantaloons', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'pantaloons', displayName: 'Pantaloons', supportedBodyTypes: ['male', 'female'] },
 ];
 
 // ============================================================================
@@ -184,9 +181,9 @@ export interface ShoesOption {
 // shoes2/boots2 have male folder and thin/ subfolder for female/teen (handled by AvatarAssetLoader)
 // 'none' is a special option for barefoot (no shoe layer rendered)
 export const SHOES: ShoesOption[] = [
-  { id: 'none' as Shoes, displayName: 'Barefoot', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
-  { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
-  { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'female', 'muscular', 'child', 'teen'] },
+  { id: 'none' as Shoes, displayName: 'Barefoot', supportedBodyTypes: ['male', 'female'] },
+  { id: 'shoes2', displayName: 'Shoes', supportedBodyTypes: ['male', 'female'] },
+  { id: 'boots2', displayName: 'Boots', supportedBodyTypes: ['male', 'female'] },
 ];
 
 // ============================================================================
