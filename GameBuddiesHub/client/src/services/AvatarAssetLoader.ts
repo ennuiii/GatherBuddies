@@ -19,8 +19,9 @@ export const LPC_COLS = 13; // Columns in LPC Universal sheet
 export const LPC_ROWS = 21; // Rows in LPC Universal sheet
 
 // Preload these assets during boot for faster initial load
+// NOTE: skin tone must be one that exists for all body types (light, olive, tan, dark)
 const PRELOAD_ASSETS = [
-  'body_neutral_fair',
+  'body_neutral_light',
   'hair_short',
   'top_tshirt',
   'bottom_jeans',

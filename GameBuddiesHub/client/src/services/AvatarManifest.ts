@@ -61,11 +61,13 @@ export interface HairStyleOption {
   hasBackLayer: boolean;
 }
 
+// NOTE: Hair style IDs must match filenames in public/assets/avatars/hair/*.png
+// Back layer files (e.g., ponytail_back.png) don't exist yet - all set to false
 export const HAIR_STYLES: HairStyleOption[] = [
   { id: 'short', displayName: 'Short', hasBackLayer: false },
-  { id: 'long', displayName: 'Long', hasBackLayer: true },
+  { id: 'long', displayName: 'Long', hasBackLayer: false },
   { id: 'curly', displayName: 'Curly', hasBackLayer: false },
-  { id: 'ponytail', displayName: 'Ponytail', hasBackLayer: true },
+  { id: 'ponytail', displayName: 'Ponytail', hasBackLayer: false },
   { id: 'mohawk', displayName: 'Mohawk', hasBackLayer: false },
   { id: 'bald', displayName: 'Bald', hasBackLayer: false },
   { id: 'afro', displayName: 'Afro', hasBackLayer: false },
@@ -132,13 +134,15 @@ export interface AccessoryOption {
   displayName: string;
 }
 
+// NOTE: No accessory assets exist yet - public/assets/avatars/accessories/ is empty
+// Add accessories here when assets are available
 export const ACCESSORIES: AccessoryOption[] = [
-  { id: 'glasses', displayName: 'Glasses' },
-  { id: 'hat_cap', displayName: 'Cap' },
-  { id: 'hat_beanie', displayName: 'Beanie' },
-  { id: 'earrings', displayName: 'Earrings' },
-  { id: 'necklace', displayName: 'Necklace' },
-  { id: 'mask', displayName: 'Mask' },
+  // { id: 'glasses', displayName: 'Glasses' },
+  // { id: 'hat_cap', displayName: 'Cap' },
+  // { id: 'hat_beanie', displayName: 'Beanie' },
+  // { id: 'earrings', displayName: 'Earrings' },
+  // { id: 'necklace', displayName: 'Necklace' },
+  // { id: 'mask', displayName: 'Mask' },
 ];
 
 // ============================================================================

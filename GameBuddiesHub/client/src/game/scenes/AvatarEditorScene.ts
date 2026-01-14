@@ -466,6 +466,23 @@ export default class AvatarEditorScene extends Phaser.Scene {
     this.optionsContainer.add(accessoriesLabel);
     y += 24;
 
+    // Show message if no accessories available
+    if (this.manifest.accessories.length === 0) {
+      const comingSoon = this.add.text(0, y + 40, 'Coming Soon!', {
+        fontSize: '18px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#666666',
+      });
+      const description = this.add.text(0, y + 70, 'Accessories will be added\nin a future update.', {
+        fontSize: '12px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#555555',
+        align: 'left',
+      });
+      this.optionsContainer.add([comingSoon, description]);
+      return;
+    }
+
     const cols = 2;
     const btnWidth = 120;
     this.manifest.accessories.forEach((acc, index) => {
