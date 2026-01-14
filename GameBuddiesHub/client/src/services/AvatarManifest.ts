@@ -128,15 +128,10 @@ export interface ClothingTopOption {
   displayName: string;
 }
 
+// NOTE: Only includes tops with extended animations (46 rows: walk, idle, sit, run)
+// Items with only 21 rows (tanktop, sleeveless, longsleeve, hoodie, jacket, dress, suit) are excluded
 export const TOPS: ClothingTopOption[] = [
   { id: 'tshirt', displayName: 'T-Shirt' },
-  { id: 'tanktop', displayName: 'Tank Top' },
-  { id: 'sleeveless', displayName: 'Sleeveless' },
-  { id: 'longsleeve', displayName: 'Long Sleeve' },
-  { id: 'hoodie', displayName: 'Hoodie' },
-  { id: 'jacket', displayName: 'Jacket' },
-  { id: 'dress', displayName: 'Dress' },
-  { id: 'suit', displayName: 'Suit' },
 ];
 
 // ============================================================================
@@ -148,15 +143,13 @@ export interface ClothingBottomOption {
   displayName: string;
 }
 
+// NOTE: Only includes bottoms with extended animations (46 rows: walk, idle, sit, run)
+// Items with only 21 rows (skirt) are excluded
 export const BOTTOMS: ClothingBottomOption[] = [
   { id: 'pants', displayName: 'Pants' },
-  { id: 'pants_formal', displayName: 'Formal Pants' },
-  { id: 'jeans', displayName: 'Jeans' },
   { id: 'shorts', displayName: 'Shorts' },
-  { id: 'skirt', displayName: 'Skirt' },
   { id: 'leggings', displayName: 'Leggings' },
   { id: 'pantaloons', displayName: 'Pantaloons' },
-  { id: 'sweatpants', displayName: 'Sweatpants' },
 ];
 
 // ============================================================================
@@ -168,15 +161,11 @@ export interface ShoesOption {
   displayName: string;
 }
 
+// NOTE: Only includes shoes with extended animations (46 rows: walk, idle, sit, run)
+// Items with only 21 rows (shoes, boots, sandals, slippers, sneakers, dress_shoes) are excluded
 export const SHOES: ShoesOption[] = [
-  { id: 'shoes', displayName: 'Shoes' },
-  { id: 'shoes2', displayName: 'Shoes Alt' },
-  { id: 'sneakers', displayName: 'Sneakers' },
-  { id: 'boots', displayName: 'Boots' },
-  { id: 'boots2', displayName: 'Boots Alt' },
-  { id: 'sandals', displayName: 'Sandals' },
-  { id: 'slippers', displayName: 'Slippers' },
-  { id: 'dress_shoes', displayName: 'Dress Shoes' },
+  { id: 'shoes2', displayName: 'Shoes' },
+  { id: 'boots2', displayName: 'Boots' },
 ];
 
 // ============================================================================

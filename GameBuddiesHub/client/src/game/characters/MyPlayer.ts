@@ -19,6 +19,7 @@ interface NavKeys {
   S: Phaser.Input.Keyboard.Key;
   A: Phaser.Input.Keyboard.Key;
   D: Phaser.Input.Keyboard.Key;
+  shift: Phaser.Input.Keyboard.Key;
 }
 
 export interface MovementData {
@@ -183,7 +184,12 @@ export default class MyPlayer extends Player {
         break;
     }
 
-    const speed = 200;
+    // Running with shift - faster speed and animation
+    const isRunning = cursors.shift?.isDown ?? false;
+    const walkSpeed = 200;
+    const runSpeed = 320;
+    const speed = isRunning ? runSpeed : walkSpeed;
+
     let vx = 0;
     let vy = 0;
 
@@ -211,6 +217,11 @@ export default class MyPlayer extends Player {
       this.playContainerBody.velocity.setLength(speed);
     }
 
+    // Animation type - use actual run animation when running
+    // (all clothing items now filtered to only 46-row extended sprites with run support)
+    const animType = isRunning ? 'run' : 'walk';
+    this.anims.timeScale = 1.0;
+
     // Sync container position directly to prevent drift
     const containerOffset = this.height * PLAYER_SCALE * 0.5;
     this.playerContainer.setPosition(this.x, this.y - containerOffset);
@@ -225,13 +236,13 @@ export default class MyPlayer extends Player {
     }
 
     if (vx > 0) {
-      this.play(`${this.playerTexture}_run_right`, true);
+      this.play(`${this.playerTexture}_${animType}_right`, true);
     } else if (vx < 0) {
-      this.play(`${this.playerTexture}_run_left`, true);
+      this.play(`${this.playerTexture}_${animType}_left`, true);
     } else if (vy > 0) {
-      this.play(`${this.playerTexture}_run_down`, true);
+      this.play(`${this.playerTexture}_${animType}_down`, true);
     } else if (vy < 0) {
-      this.play(`${this.playerTexture}_run_up`, true);
+      this.play(`${this.playerTexture}_${animType}_up`, true);
     } else {
       // Idle animation
       const currentAnim = this.anims.currentAnim?.key;

@@ -33,19 +33,19 @@ export type HairStyle =
   | 'pixie' | 'bedhead' | 'bob' | 'cowlick' | 'spiked' | 'shorthawk' | 'buzzcut' | 'flat_top_fade'
   // Medium styles
   | 'bangs' | 'bangslong' | 'parted' | 'swoop' | 'curly_short' | 'ponytail' | 'ponytail2'
-  | 'braid' | 'idol' | 'shoulderl' | 'shoulderr' | 'messy' | 'page'
+  | 'braid' | 'idol' | 'shoulderl' | 'shoulderr' | 'messy1' | 'page'
   // Long styles
   | 'long' | 'long_straight' | 'long_messy' | 'curly_long' | 'wavy' | 'princess'
   | 'high_ponytail' | 'pigtails' | 'xlong' | 'half_up'
   // Textured styles
   | 'afro' | 'dreadlocks_long' | 'dreadlocks_short' | 'cornrows' | 'natural'
   // Special
-  | 'bald' | 'balding';
+  | 'balding';
 
-// Clothing options
-export type ClothingTop = 'tshirt' | 'tanktop' | 'sleeveless' | 'longsleeve' | 'hoodie' | 'jacket' | 'dress' | 'suit';
-export type ClothingBottom = 'pants' | 'pants_formal' | 'jeans' | 'shorts' | 'skirt' | 'leggings' | 'pantaloons' | 'sweatpants';
-export type Shoes = 'shoes' | 'shoes2' | 'sneakers' | 'boots' | 'boots2' | 'sandals' | 'slippers' | 'dress_shoes';
+// Clothing options (filtered to only items with extended 46-row animations: walk, idle, sit, run)
+export type ClothingTop = 'tshirt';
+export type ClothingBottom = 'pants' | 'shorts' | 'leggings' | 'pantaloons';
+export type Shoes = 'shoes2' | 'boots2';
 
 // Accessory options (glasses and hats)
 export type AccessoryType =
@@ -120,9 +120,9 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   clothing: {
     top: 'tshirt',
     topColor: '#3B82F6',
-    bottom: 'jeans',
+    bottom: 'pants',
     bottomColor: '#1E3A5F',
-    shoes: 'sneakers',
+    shoes: 'shoes2',
     shoesColor: '#FFFFFF',
   },
   accessories: [],
